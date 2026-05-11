@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>ColorBlend Lab</title>
+		<style>
+			:root {
+				--bg-dark: #0f0f16;
+				--panel-bg: #1a1a24;
+				--text-light: #e0e0e0;
+
+				--raw-base-color: #ff007f;
+				--base-alpha: 100%;
+
+				--base-color: rgb(from var(--raw-base-color) r g b / var(--base-alpha));
+				--mix-color: #00ffff;
+
+				--result-mix: color-mix(in oklab, var(--base-color) 50%, var(--mix-color));
+
+				--mod-oklch-l: 0;
+				--mod-oklch-c: 0;
+				--mod-oklch-h: 0;
+				--result-oklch: oklch(from var(--base-color) calc(l + var(--mod-oklch-l)) calc(c + var(--mod-oklch-c)) calc(h + var(--mod-oklch-h)));
+
+				--flt-hue: 0deg;
+				--flt-sat: 100%;
+				--flt-contrast: 100%;
+				--flt-invert: 0%;
+
+				--contrast-text: #ffffff;
+			}
+
+			body {
+				margin: 0;
+				padding: 0;
+				font-family: 'Segoe UI', Tahoma, sans-serif;
+				background-color: var(--bg-dark);
+				color: var(--text-light);
+				display: flex;
+				height: 100vh;
+				overflow: hidden;
+
+				background-image:
+					linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+					linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+				background-size: 40px 40px;
+				animation: scrollGrid 15s linear infinite;
+			}
+
+			@keyframes scrollGrid {
+				0% {
+					background-position: 0px 0px;
+				}
+
+				100% {
+					background-position: 40px 40px;
+				}
+			}
+
+			.side-panel {
+				width: 320px;
+				background-color: rgba(26, 26, 36, 0.95);
+				backdrop-filter: blur(10px);
+				padding: 30px;
+				box-shadow: 5px 0 20px rgba(0, 0, 0, 0.5);
+				border-right: 1px solid rgba(255, 255, 255, 0.1);
+				z-index: 10;
+			}
+
+			.main-area {
+				flex: 1;
+				padding: 40px;
+				overflow-y: auto;
+				display: flex;
+				flex-direction: column;
+				gap: 40px;
+			}
+
+			/* --- COMPOSANTS UI --- */
+			.module-card {
+				background: rgba(15, 15, 22, 0.85);
+				backdrop-filter: blur(15px);
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				border-radius: 16px;
+				padding: 25px;
+				display: grid;
+				grid-template-columns: 250px 1fr;
+				gap: 30px;
+				box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+			}
+
+			.color-swatch-container {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+
+			.color-swatch {
+				width: 100%;
+				height: 160px;
+				border-radius: 12px;
+				box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 10px 20px rgba(0, 0, 0, 0.4);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: bold;
+				font-size: 1.2rem;
+				text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+			}
+
+			.controls-area {
+				display: flex;
+				flex-direction: column;
+				gap: 15px;
+			}
+
+			.controls-area h2 {
+				margin: 0 0 5px 0;
+				color: #fff;
+				font-size: 1.4rem;
+			}
+
+			.controls-area p {
+				margin: 0 0 15px 0;
+				color: #aaa;
+				font-size: 0.9rem;
+			}
+
+			.code-block {
+				background: #000;
+				color: #0f0;
+				padding: 10px;
+				border-radius: 6px;
+				font-family: monospace;
+				font-size: 0.85rem;
+				margin-bottom: 15px;
+			}
+
+			/* --- INPUTS --- */
+			.input-row {
+				display: flex;
+				align-items: center;
+				gap: 15px;
+				background: rgba(255, 255, 255, 0.03);
+				padding: 10px 15px;
+				border-radius: 8px;
+			}
+
+			.input-row label {
+				flex: 1;
+				font-size: 0.9rem;
+				font-weight: bold;
+			}
+
+			.input-row input[type="range"] {
+				flex: 2;
+				cursor: pointer;
+			}
+
+			.input-row .val {
+				width: 50px;
+				text-align: right;
+				color: var(--raw-base-color);
+				font-family: monospace;
+				font-weight: bold;
+			}
+
+			select,
+			input[type="color"] {
+				background: #2a2a36;
+				color: white;
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				padding: 8px 12px;
+				border-radius: 6px;
+				outline: none;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+
+	<body>
+
+		<div class="side-panel">
+			<h2 style="color: var(--raw-base-color); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">🌍 Base Système</h2>
+			<p style="font-size: 0.85rem; color: #aaa;">Ces paramètres affectent tous les modules simultanément.</p>
+
+			<div style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px;">
+				<div>
+					<label style="display:block; margin-bottom: 5px;">Couleur de Base</label>
+					<input type="color" id="in-base" value="#ff007f" style="width: 100%; height: 50px;">
+				</div>
+
+				<div>
+					<label style="display: flex; justify-content: space-between;">
+						Opacité (RCS Alpha) <span id="val-alpha" style="color: var(--raw-base-color); font-weight: bold;">100%</span>
+					</label>
+					<input type="range" id="in-alpha" min="0" max="100" value="100" style="width: 100%; margin-top: 8px;">
+					<small style="color: #666; font-size: 0.75rem;">Utilise : rgb(from var(--c) r g b / alpha)</small>
+				</div>
+
+				<div>
+					<label style="display:block; margin-bottom: 5px; margin-top: 20px;">Couleur Mix (Secondaire)</label>
+					<input type="color" id="in-mix" value="#00ffff" style="width: 100%; height: 50px;">
+				</div>
+			</div>
+		</div>
+
+		<div class="main-area">
+
+			<div class="module-card">
+				<div class="color-swatch-container">
+					<div class="color-swatch" style="background-color: var(--result-mix);">MIX</div>
+				</div>
+				<div class="controls-area">
+					<h2>1. Le Color-Mixer</h2>
+					<p>Choisis l'espace colorimétrique d'interpolation. Remarque comme `srgb` crée des couleurs ternes par rapport à `oklab` ou `oklch`.</p>
+					<div class="code-block" id="code-mix">color-mix(in oklab, var(--base) 50%, var(--mix))</div>
+
+					<div class="input-row">
+						<label>Espace (in ...)</label>
+						<select id="in-mix-space" style="flex: 2;">
+							<option value="srgb">srgb (Classique)</option>
+							<option value="oklab" selected>oklab (Le meilleur)</option>
+							<option value="oklch">oklch (Le plus saturé)</option>
+							<option value="hsl">hsl (Ancien)</option>
+						</select>
+					</div>
+					<div class="input-row">
+						<label>Ratio de Base</label>
+						<input type="range" id="in-mix-pct" min="0" max="100" value="50">
+						<span class="val" id="val-mix-pct">50%</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="module-card">
+				<div class="color-swatch-container">
+					<div class="color-swatch" style="background-color: var(--result-oklch);">OKLCH</div>
+				</div>
+				<div class="controls-area">
+					<h2>2. Modificateurs RCS (oklch)</h2>
+					<p>Altère la couleur en décomposant ses canaux. Idéal pour générer des thèmes dynamiques.</p>
+					<div class="code-block">oklch(from var(--base) calc(l + L) calc(c + C) calc(h + H))</div>
+
+					<div class="input-row">
+						<label>Luminosité (L)</label>
+						<input type="range" class="mod-oklch" data-var="--mod-oklch-l" min="-1" max="1" step="0.05" value="0">
+						<span class="val">0</span>
+					</div>
+					<div class="input-row">
+						<label>Chroma (C)</label>
+						<input type="range" class="mod-oklch" data-var="--mod-oklch-c" min="-0.4" max="0.4" step="0.01" value="0">
+						<span class="val">0</span>
+					</div>
+					<div class="input-row">
+						<label>Teinte (H)</label>
+						<input type="range" class="mod-oklch" data-var="--mod-oklch-h" min="-360" max="360" step="1" value="0" data-suffix="deg">
+						<span class="val">0deg</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="module-card">
+				<div class="color-swatch-container">
+					<div class="color-swatch" id="swatch-filter"
+																	  style="background-color: var(--base-color); filter: hue-rotate(var(--flt-hue)) saturate(var(--flt-sat)) contrast(var(--flt-contrast)) invert(var(--flt-invert));">
+						FILTER</div>
+				</div>
+				<div class="controls-area">
+					<h2>3. Effets de Filtres (GPU)</h2>
+					<p>Contrairement à RCS, `filter` agit sur le rendu final des pixels via la carte graphique. Parfait pour les interactions au `:hover` ou les images.</p>
+					<div class="code-block">filter: hue-rotate(...) saturate(...) contrast(...) invert(...)</div>
+
+					<div class="input-row">
+						<label>Hue-Rotate</label>
+						<input type="range" class="mod-filter" data-var="--flt-hue" min="0" max="360" step="1" value="0" data-suffix="deg">
+						<span class="val">0deg</span>
+					</div>
+					<div class="input-row">
+						<label>Saturate</label>
+						<input type="range" class="mod-filter" data-var="--flt-sat" min="0" max="300" step="1" value="100" data-suffix="%">
+						<span class="val">100%</span>
+					</div>
+					<div class="input-row">
+						<label>Contrast</label>
+						<input type="range" class="mod-filter" data-var="--flt-contrast" min="0" max="200" step="1" value="100" data-suffix="%">
+						<span class="val">100%</span>
+					</div>
+					<div class="input-row">
+						<label>Invert</label>
+						<input type="range" class="mod-filter" data-var="--flt-invert" min="0" max="100" step="1" value="0" data-suffix="%">
+						<span class="val">0%</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="module-card">
+				<div class="color-swatch-container">
+					<div class="color-swatch" id="swatch-contrast" style="background-color: var(--base-color); color: var(--contrast-text); transition: color 0.3s;">TEXTE AUTO
+					</div>
+				</div>
+				<div class="controls-area">
+					<h2>4. Auto-Contraste</h2>
+					<p>Génère un texte <b>Blanc</b> ou <b>Noir</b> de façon à garantir une accessibilité parfaite selon la luminosité de la couleur de fond.</p>
+					<div class="code-block">color: color-contrast(var(--base) vs white, black)</div>
+					<div style="background: rgba(255,100,100,0.1); padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #ff8888; border: 1px solid rgba(255,100,100,0.3);">
+						⚠️ <b>Tech Note :</b> La spécification native <code>color-contrast()</code> n'étant pas encore supportée par Chrome/Firefox, ce bloc utilise un algorithme
+						JS (Polyfill) qui calcule la luminance relative YIQ pour simuler la fonction CSS finale ! Change la couleur de base ou son opacité pour tester.
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<script>
+			const root = document.documentElement;
+
+
+			const inBase = document.getElementById('in-base');
+			const inAlpha = document.getElementById('in-alpha');
+			const valAlpha = document.getElementById('val-alpha');
+			const inMix = document.getElementById('in-mix');
+
+			function updateBaseColors() {
+				root.style.setProperty('--raw-base-color', inBase.value);
+				root.style.setProperty('--base-alpha', `${inAlpha.value}%`);
+				valAlpha.textContent = `${inAlpha.value}%`;
+				updateColorContrastPolyfill();
+			}
+
+			inBase.addEventListener('input', updateBaseColors);
+			inAlpha.addEventListener('input', updateBaseColors);
+			inMix.addEventListener('input', (e) => root.style.setProperty('--mix-color', e.target.value));
+
+
+			const inMixSpace = document.getElementById('in-mix-space');
+			const inMixPct = document.getElementById('in-mix-pct');
+			const valMixPct = document.getElementById('val-mix-pct');
+			const codeMix = document.getElementById('code-mix');
+
+			function updateMixer() {
+				const space = inMixSpace.value;
+				const pct = inMixPct.value + '%';
+
+				const cssRule = `color-mix(in ${space}, var(--base-color) ${pct}, var(--mix-color))`;
+
+				root.style.setProperty('--result-mix', cssRule);
+				valMixPct.textContent = pct;
+				codeMix.textContent = `color-mix(in ${space}, var(--base) ${pct}, var(--mix))`;
+			}
+
+			inMixSpace.addEventListener('change', updateMixer);
+			inMixPct.addEventListener('input', updateMixer);
+
+
+			const sliders = document.querySelectorAll('.mod-oklch, .mod-filter');
+
+			sliders.forEach(slider => {
+				slider.addEventListener('input', (e) => {
+					const varName = e.target.getAttribute('data-var');
+					const suffix = e.target.getAttribute('data-suffix') || '';
+					const val = e.target.value;
+
+					root.style.setProperty(varName, val + suffix);
+
+
+					const display = e.target.nextElementSibling;
+					if (display && display.classList.contains('val')) {
+						const sign = (val > 0 && varName.includes('oklch')) ? '+' : '';
+						display.textContent = `${sign}${val}${suffix}`;
+					}
+				});
+			});
+
+
+			function updateColorContrastPolyfill() {
+				let hex = inBase.value.replace('#', '');
+				let r = parseInt(hex.substr(0, 2), 16);
+				let g = parseInt(hex.substr(2, 2), 16);
+				let b = parseInt(hex.substr(4, 2), 16);
+
+
+				const alpha = inAlpha.value / 100;
+
+				const bgR = 15, bgG = 15, bgB = 22;
+
+
+				const finalR = Math.round((r * alpha) + (bgR * (1 - alpha)));
+				const finalG = Math.round((g * alpha) + (bgG * (1 - alpha)));
+				const finalB = Math.round((b * alpha) + (bgB * (1 - alpha)));
+
+
+				const yiq = ((finalR * 299) + (finalG * 587) + (finalB * 114)) / 1000;
+
+
+				const contrastColor = (yiq >= 128) ? '#000000' : '#ffffff';
+
+				root.style.setProperty('--contrast-text', contrastColor);
+			}
+
+
+			updateColorContrastPolyfill();
+		</script>
+	</body>
+
+</html>

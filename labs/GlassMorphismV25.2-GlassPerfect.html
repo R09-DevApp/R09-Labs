@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Glassmorphisme</title>
+        <style>
+            /* ==========================================================================
+           🎛️ TABLEAU DE BORD CENTRAL (:root)
+        ========================================================================== */
+            :root {
+
+                --pilule-pos-x: 0px;
+                --pilule-pos-y: 0px;
+                --pilule-largeur: 380px;
+                --pilule-hauteur: 120px;
+                --pilule-epaisseur-du-verre: 20px;
+                --pilule-arrondi-des-bords: 60px;
+
+
+                --texte-taille-police: 45px;
+                --texte-font-family: system-ui, -apple-system, sans-serif;
+                --texte-espacement-lettres: 2px;
+                --texte-align-h: center;
+                --texte-align-v: center;
+                --texte-couleur: rgba(255, 255, 255, 0.95);
+                --texte-ombre-portee: 0 4px 10px rgba(0, 0, 0, 0.5);
+
+
+                --liquide-niveau-de-remplissage: 30%;
+                --liquide-couleur-haut: rgba(255, 50, 50, 0.8);
+                --liquide-couleur-bas: rgba(200, 0, 0, 0.9);
+                --liquide-viscosite-frein-du-texte: 0.8;
+                --liquide-flou-visuel: 6px;
+
+
+                --verre-opacite: 0.05;
+                --verre-flou-refraction: 4px;
+                --verre-saturation: 1.2;
+                --verre-ombre-portee-globale: 0 40px 80px rgba(0, 0, 0, 0.6);
+                --verre-ombre-interne-profondeur: inset 0 0 20px rgba(0, 0, 0, 0.5);
+                --verre-biseau-reflet-lumiere: inset 5px 5px 20px rgba(255, 255, 255, 0.5);
+                --verre-biseau-ombre-sombre: inset -5px -5px 20px rgba(0, 0, 0, 0.5);
+
+
+                --verre-liseret-brillance: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, transparent 35%, transparent 65%, rgba(255, 255, 255, 0.2) 100%);
+                --reflet-opacite-max: 0.15;
+                --reflet-opacite-min: 0.05;
+                --lisere-dynamique-intensite: 0.9;
+
+
+                --pilule-vitesse-brute: 6;
+                --pilule-vitesse-animation-globale: calc(var(--pilule-vitesse-brute) * 1s);
+                --mouvement-pilule-flottaison-y: 20px;
+                --mouvement-liquide-vagues-y: 10px;
+                --mouvement-liquide-rotation-degres: 10deg;
+                --mouvement-lettres-chaos-max: 12px;
+                --texte-forcer-dans-liquide: var(--liquide-niveau-de-remplissage);
+
+                --facteur-agitation: calc(1 + (6 - var(--pilule-vitesse-brute)) * 0.08);
+                --formule-chaos-calcule: calc((1.1 - var(--liquide-viscosite-frein-du-texte)) * var(--facteur-agitation));
+
+
+                --light-x: 50%;
+                --light-y: 50%;
+            }
+
+            /* ==========================================================================
+           📐 MISE EN PAGE ET PANNEAU LATÉRAL
+        ========================================================================== */
+            body {
+                margin: 0;
+                font-family: system-ui, sans-serif;
+                background: #111;
+                color: #fff;
+                overflow: hidden;
+            }
+
+            #app-layout {
+                display: flex;
+                height: 100vh;
+                width: 100vw;
+            }
+
+            #sidebar {
+                width: 320px;
+
+                background: #1a1a1a;
+                border-right: 1px solid #333;
+                position: relative;
+                z-index: 100;
+                display: flex;
+                flex-direction: column;
+                transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .sidebar-header {
+                padding: 10px 15px;
+                border-bottom: 1px solid #333;
+                background: #151515;
+            }
+
+            .sidebar-header h1 {
+                margin: 0;
+                font-size: 0.85rem;
+                color: #fff;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .sidebar-content {
+                padding: 15px;
+                flex: 1;
+                overflow-y: auto;
+            }
+
+            .sidebar-content::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .sidebar-content::-webkit-scrollbar-thumb {
+                background: #444;
+                border-radius: 4px;
+            }
+
+            .control-group {
+                margin-bottom: 10px;
+                border-bottom: 1px dashed #333;
+            }
+
+            .control-group summary {
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                cursor: pointer;
+                padding-bottom: 10px;
+                list-style: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                user-select: none;
+            }
+
+            .control-group summary::-webkit-details-marker {
+                display: none;
+            }
+
+            .control-group summary::after {
+                content: '▼';
+                font-size: 0.6rem;
+                color: #666;
+                transition: transform 0.3s ease;
+            }
+
+            .control-group[open] summary::after {
+                transform: rotate(180deg);
+            }
+
+            .group-content {
+                padding-bottom: 15px;
+            }
+
+
+            .sub-divider {
+                margin: 12px 0 6px 0;
+                font-size: 0.6rem;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                border-bottom: 1px solid #333;
+                padding-bottom: 3px;
+            }
+
+            .color-dim {
+                color: #4facf7;
+            }
+
+            .color-verre {
+                color: #50e3c2;
+            }
+
+            .color-lumiere {
+                color: #e5e5ea;
+            }
+
+            .color-typo {
+                color: #f5a623;
+            }
+
+            .color-env {
+                color: #ff3366;
+            }
+
+            .input-row {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                margin-bottom: 8px;
+                position: relative;
+            }
+
+            .input-row:last-child {
+                margin-bottom: 0;
+            }
+
+            .input-row label {
+                font-size: 0.65rem;
+                color: #aaa;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .input-row span.val {
+                color: #fff;
+                font-family: monospace;
+                background: #222;
+                padding: 2px 4px;
+                border-radius: 3px;
+                font-size: 0.6rem;
+            }
+
+            .input-row input[type="range"] {
+                -webkit-appearance: none;
+                width: 100%;
+                height: 2px;
+                background: #444;
+                border-radius: 2px;
+                outline: none;
+                cursor: pointer;
+                margin: 6px 0;
+            }
+
+            .input-row input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                cursor: ew-resize;
+            }
+
+            .input-row input[type="text"],
+            .input-row select {
+                width: 100%;
+                padding: 4px 6px;
+                border-radius: 4px;
+                border: 1px solid #444;
+                background: #111;
+                color: white;
+                box-sizing: border-box;
+                font-size: 0.7rem;
+            }
+
+            .toggle-arrow {
+                position: absolute;
+                top: 15px;
+                right: -20px;
+                width: 20px;
+                height: 35px;
+                background: #1a1a1a;
+                border: 1px solid #333;
+                border-left: none;
+                border-radius: 0 4px 4px 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: #aaa;
+                box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+                transition: background 0.2s, color 0.2s;
+                font-size: 0.7rem;
+            }
+
+            .toggle-arrow:hover {
+                color: #fff;
+                background: #2a2a2a;
+            }
+
+            .arrow-icon {
+                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            #sidebar-toggle:checked~#app-layout #sidebar {
+                margin-left: -320px;
+            }
+
+            #sidebar-toggle:checked~#app-layout .arrow-icon {
+                transform: rotate(180deg);
+            }
+
+            #preview-zone {
+                flex: 1;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .bg-demo {
+                position: absolute;
+                inset: 0;
+                background-image: url('https://images.unsplash.com/photo-1449824913935-59a10b8d2000?q=80&w=2560&auto=format&fit=crop');
+                background-size: cover;
+                background-position: center;
+                opacity: 0.5;
+                z-index: 0;
+            }
+
+            #code-tooltip {
+                position: fixed;
+                top: 0;
+                left: 0;
+                pointer-events: none;
+                background: rgba(10, 10, 10, 0.95);
+                border: 1px solid #333;
+                color: #00d2ff;
+                font-weight: bold;
+                padding: 6px 10px;
+                border-radius: 4px;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 0.7rem;
+                z-index: 9999;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.15s ease;
+                white-space: pre;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+                will-change: transform, opacity;
+            }
+
+            #code-tooltip.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            /* ==========================================================================
+           🏗️ STRUCTURE CSS DE LA PILULE
+        ========================================================================== */
+            .pill-wrapper {
+                position: relative;
+                width: var(--pilule-largeur);
+                height: var(--pilule-hauteur);
+                border-radius: var(--pilule-arrondi-des-bords);
+                box-shadow: var(--verre-ombre-portee-globale);
+                animation: floatPill var(--pilule-vitesse-animation-globale) infinite ease-in-out alternate;
+                transform-style: preserve-3d;
+                will-change: transform;
+                transform: translate(var(--pilule-pos-x), var(--pilule-pos-y));
+            }
+
+            .pill-inner-space {
+                position: absolute;
+                inset: var(--pilule-epaisseur-du-verre);
+                border-radius: max(0px, calc(var(--pilule-arrondi-des-bords) - var(--pilule-epaisseur-du-verre)));
+                overflow: hidden;
+                z-index: 2;
+                box-shadow: var(--verre-ombre-interne-profondeur);
+            }
+
+            .pillLiquid {
+                position: absolute;
+                width: 200%;
+                height: 250%;
+                top: var(--liquide-niveau-de-remplissage);
+                left: -50%;
+                background: linear-gradient(180deg, var(--liquide-couleur-haut) 0%, var(--liquide-couleur-bas) 100%);
+                transform-origin: center top;
+                filter: blur(var(--liquide-flou-visuel)) url(#svg-liquide-distort);
+                animation: sloshLiquid var(--pilule-vitesse-animation-globale) infinite ease-in-out alternate;
+                will-change: transform;
+            }
+
+            .pillContent {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                top: var(--texte-forcer-dans-liquide);
+                display: flex;
+                justify-content: var(--texte-align-h);
+                align-items: var(--texte-align-v);
+                padding: calc(var(--mouvement-lettres-chaos-max) + 5px);
+                animation: viscousLag var(--pilule-vitesse-animation-globale) infinite ease-in-out alternate;
+                animation-delay: calc(var(--pilule-vitesse-brute) * -0.1s);
+                will-change: transform;
+            }
+
+            .pillText {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: var(--texte-align-h);
+                gap: 10px;
+                width: 100%;
+                word-break: break-word;
+                text-align: center;
+                color: var(--texte-couleur);
+                font-weight: 900;
+                font-family: var(--texte-font-family);
+                letter-spacing: var(--texte-espacement-lettres);
+                text-shadow: var(--texte-ombre-portee);
+                font-size: min(var(--texte-taille-police), calc((var(--pilule-hauteur) - var(--pilule-epaisseur-du-verre) * 2 - var(--mouvement-lettres-chaos-max) * 2) * 0.8));
+            }
+
+            .word {
+                display: flex;
+                white-space: nowrap;
+                animation: floatWord calc(var(--pilule-vitesse-brute) * 0.8s) infinite ease-in-out alternate;
+                will-change: transform;
+            }
+
+            .letter {
+                display: inline-block;
+                animation: organicLetter calc((var(--pilule-vitesse-brute) * 0.5s) + 1s) infinite ease-in-out alternate;
+                will-change: transform;
+            }
+
+            .glass-layer-bevel {
+                position: absolute;
+                inset: 0;
+                border-radius: var(--pilule-arrondi-des-bords);
+                padding: var(--pilule-epaisseur-du-verre);
+                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                mask: auto;
+                -webkit-mask-composite: xor;
+                mask-composite: exclude;
+                backdrop-filter: blur(var(--verre-flou-refraction)) url(#svg-bord-distort);
+                box-shadow: var(--verre-biseau-reflet-lumiere), var(--verre-biseau-ombre-sombre);
+                z-index: 1;
+                pointer-events: none;
+            }
+
+            .glass-layer-center {
+                position: absolute;
+                inset: 0;
+                border-radius: var(--pilule-arrondi-des-bords);
+                background: rgba(255, 255, 255, var(--verre-opacite));
+                backdrop-filter: blur(var(--verre-flou-refraction)) saturate(var(--verre-saturation)) url(#svg-pilule-distort);
+                z-index: 10;
+                pointer-events: none;
+            }
+
+            .glass-dynamic-light {
+                position: absolute;
+                inset: 0;
+                border-radius: var(--pilule-arrondi-des-bords);
+                pointer-events: none;
+                z-index: 11;
+                background: radial-gradient(circle at var(--light-x) var(--light-y), rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 30%, transparent 60%);
+            }
+
+            .glass-reflection {
+                position: absolute;
+                inset: 0;
+                border-radius: var(--pilule-arrondi-des-bords);
+                pointer-events: none;
+                z-index: 12;
+                background: linear-gradient(105deg, rgba(255, 255, 255, var(--reflet-opacite-max)) 0%, rgba(255, 255, 255, var(--reflet-opacite-min)) 45%, transparent 45.1%, transparent 100%);
+                -webkit-mask: linear-gradient(#fff 0 0);
+            }
+
+            .glass-highlight {
+                position: absolute;
+                inset: 0;
+                border-radius: var(--pilule-arrondi-des-bords);
+                pointer-events: none;
+                z-index: 13;
+                border: 2px solid transparent;
+                background: var(--verre-liseret-brillance) border-box;
+                -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+                mask: auto;
+                -webkit-mask-composite: destination-out;
+                mask-composite: exclude;
+            }
+
+            .glass-edge-glow {
+                position: absolute;
+                inset: 0;
+                border-radius: var(--pilule-arrondi-des-bords);
+                pointer-events: none;
+                z-index: 14;
+                border: 2px solid transparent;
+                background: radial-gradient(circle 150px at var(--light-x) var(--light-y), rgba(255, 255, 255, var(--lisere-dynamique-intensite)) 0%, rgba(255, 255, 255, 0) 100%) border-box;
+                -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+                mask: auto;
+                -webkit-mask-composite: destination-out;
+                mask-composite: exclude;
+                will-change: background;
+            }
+
+            @keyframes floatPill {
+                0% {
+                    transform: translate(var(--pilule-pos-x), var(--pilule-pos-y)) translateY(var(--mouvement-pilule-flottaison-y)) rotateX(15deg) rotateY(-10deg) rotateZ(-5deg);
+                }
+
+                100% {
+                    transform: translate(var(--pilule-pos-x), var(--pilule-pos-y)) translateY(calc(var(--mouvement-pilule-flottaison-y) * -1)) rotateX(-15deg) rotateY(10deg) rotateZ(5deg);
+                }
+            }
+
+            @keyframes sloshLiquid {
+                0% {
+                    transform: translateY(calc(var(--mouvement-liquide-vagues-y) * -1)) translateX(-5%) rotateZ(var(--mouvement-liquide-rotation-degres));
+                }
+
+                100% {
+                    transform: translateY(var(--mouvement-liquide-vagues-y)) translateX(5%) rotateZ(calc(var(--mouvement-liquide-rotation-degres) * -1));
+                }
+            }
+
+            @keyframes viscousLag {
+                0% {
+                    transform: translate(5px, 10px);
+                }
+
+                100% {
+                    transform: translate(-5px, -10px);
+                }
+            }
+
+            @keyframes floatWord {
+                0% {
+                    transform: translate(-3px, -3px) rotateZ(-2deg);
+                }
+
+                100% {
+                    transform: translate(3px, 3px) rotateZ(2deg);
+                }
+            }
+
+            @keyframes organicLetter {
+                0% {
+                    transform: translate(calc(var(--mouvement-lettres-chaos-max) * var(--formule-chaos-calcule) * var(--rx) * -1), calc(var(--mouvement-lettres-chaos-max) * var(--formule-chaos-calcule) * var(--ry) * -1));
+                }
+
+                100% {
+                    transform: translate(calc(var(--mouvement-lettres-chaos-max) * var(--formule-chaos-calcule) * var(--rx)), calc(var(--mouvement-lettres-chaos-max) * var(--formule-chaos-calcule) * var(--ry)));
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <input type="checkbox" id="sidebar-toggle" hidden>
+
+        <div id="app-layout">
+            <aside id="sidebar">
+                <div class="sidebar-header">
+                    <h1>⚙️ Console Globale</h1>
+                </div>
+
+                <div class="sidebar-content">
+                    <details class="control-group">
+                        <summary class="color-dim">Dimensions</summary>
+                        <div class="group-content">
+                            <div class="input-row"><label>Position X <span class="val" id="val-pos-x">0px</span></label><input type="range" data-var="--pilule-pos-x" data-unit="px"
+                                                                                  id="pos-x" min="-500" max="500" value="0"></div>
+                            <div class="input-row"><label>Position Y <span class="val" id="val-pos-y">0px</span></label><input type="range" data-var="--pilule-pos-y" data-unit="px"
+                                                                                  id="pos-y" min="-500" max="500" value="0"></div>
+                            <div class="input-row"><label>Largeur <span class="val" id="val-largeur">380px</span></label><input type="range" data-var="--pilule-largeur"
+                                                                                  data-unit="px" id="largeur" min="150" max="800" value="380"></div>
+                            <div class="input-row"><label>Hauteur <span class="val" id="val-hauteur">120px</span></label><input type="range" data-var="--pilule-hauteur"
+                                                                                  data-unit="px" id="hauteur" min="60" max="500" value="120"></div>
+                        </div>
+                    </details>
+
+                    <details class="control-group" open>
+                        <summary class="color-verre">Verre & Réfraction</summary>
+                        <div class="group-content">
+                            <div class="input-row"><label>Épaisseur <span class="val" id="val-epaisseur">20px</span></label><input type="range"
+                                                                                  data-var="--pilule-epaisseur-du-verre" data-unit="px" id="epaisseur" min="1" max="80" value="20">
+                            </div>
+                            <div class="input-row"><label>Flou Réfraction <span class="val" id="val-verre-flou">4px</span></label><input type="range"
+                                                                                  data-var="--verre-flou-refraction" data-unit="px" id="verre-flou" min="0" max="20" step="0.5"
+                                                                                  value="4"></div>
+                            <div class="input-row"><label>Saturation <span class="val" id="val-verre-sat">1.2</span></label><input type="range" data-var="--verre-saturation"
+                                                                                  id="verre-sat" min="0" max="3" step="0.1" value="1.2"></div>
+                            <div class="input-row"><label>Opacité <span class="val" id="val-verre-op">0.05</span></label><input type="range" data-var="--verre-opacite"
+                                                                                  id="verre-op" min="0" max="1" step="0.05" value="0.05"></div>
+
+                            <div class="sub-divider">Déformation Pilule (Centre)</div>
+                            <div class="input-row"><label>Échelle <span class="val" id="val-svg-pilule">12</span></label><input type="range" data-svg-target="svg-pilule-disp"
+                                                                                  data-svg-attr="scale" id="svg-pilule" min="0" max="100" value="12"></div>
+                            <div class="input-row"><label>Fréquence Bruit <span class="val" id="val-svg-pilule-freq">0.02</span></label><input type="range"
+                                                                                  data-svg-target="turb-pilule" data-svg-attr="baseFrequency" id="svg-pilule-freq" min="0.001"
+                                                                                  max="0.1" step="0.001" value="0.02"></div>
+                            <div class="input-row"><label>Détail (Octaves) <span class="val" id="val-svg-pilule-oct">2</span></label><input type="range"
+                                                                                  data-svg-target="turb-pilule" data-svg-attr="numOctaves" id="svg-pilule-oct" min="1" max="5"
+                                                                                  step="1" value="2"></div>
+
+                            <div class="sub-divider">Déformation Bords (Biseau)</div>
+                            <div class="input-row"><label>Échelle <span class="val" id="val-svg-bord">35</span></label><input type="range" data-svg-target="svg-bord-disp"
+                                                                                  data-svg-attr="scale" id="svg-bord" min="0" max="150" value="35"></div>
+                            <div class="input-row"><label>Fréquence Bruit <span class="val" id="val-svg-bord-freq">0.03</span></label><input type="range"
+                                                                                  data-svg-target="turb-bord" data-svg-attr="baseFrequency" id="svg-bord-freq" min="0.001" max="0.1"
+                                                                                  step="0.001" value="0.03"></div>
+                            <div class="input-row"><label>Détail (Octaves) <span class="val" id="val-svg-bord-oct">2</span></label><input type="range" data-svg-target="turb-bord"
+                                                                                  data-svg-attr="numOctaves" id="svg-bord-oct" min="1" max="5" step="1" value="2"></div>
+                        </div>
+                    </details>
+
+                    <details class="control-group">
+                        <summary class="color-env">Environnement & Liquide</summary>
+                        <div class="group-content">
+                            <div class="input-row"><label>Vitesse Globale <span class="val" id="val-vitesse">6s</span></label><input type="range" data-var="--pilule-vitesse-brute"
+                                                                                  data-display-unit="s" id="vitesse" min="1" max="15" step="0.5" value="6"></div>
+                            <div class="input-row"><label>Niveau Liquide <span class="val" id="val-niveau">30%</span></label><input type="range"
+                                                                                  data-var="--liquide-niveau-de-remplissage" data-unit="%" id="niveau" min="-10" max="110" step="1"
+                                                                                  value="30"></div>
+
+                            <div class="sub-divider">Déformation Liquide</div>
+                            <div class="input-row"><label>Échelle <span class="val" id="val-svg-liquide">5</span></label><input type="range" data-svg-target="svg-liquide-disp"
+                                                                                  data-svg-attr="scale" id="svg-liquide" min="0" max="50" value="5"></div>
+                            <div class="input-row"><label>Fréquence Bruit <span class="val" id="val-svg-liq-freq">0.01</span></label><input type="range"
+                                                                                  data-svg-target="turb-liquide" data-svg-attr="baseFrequency" id="svg-liq-freq" min="0.001"
+                                                                                  max="0.1" step="0.001" value="0.01"></div>
+                            <div class="input-row"><label>Détail (Octaves) <span class="val" id="val-svg-liq-oct">1</span></label><input type="range" data-svg-target="turb-liquide"
+                                                                                  data-svg-attr="numOctaves" id="svg-liq-oct" min="1" max="5" step="1" value="1"></div>
+                        </div>
+                    </details>
+
+                    <details class="control-group">
+                        <summary class="color-lumiere">Lumières & Reflets</summary>
+                        <div class="group-content">
+                            <div class="input-row"><label>Reflet Glossy Max <span class="val" id="val-reflet-max">0.15</span></label><input type="range"
+                                                                                  data-var="--reflet-opacite-max" id="reflet-max" min="0" max="1" step="0.05" value="0.15"></div>
+                            <div class="input-row"><label>Reflet Glossy Min <span class="val" id="val-reflet-min">0.05</span></label><input type="range"
+                                                                                  data-var="--reflet-opacite-min" id="reflet-min" min="0" max="1" step="0.05" value="0.05"></div>
+                            <div class="input-row"><label>Intensité Liseré (Souris) <span class="val" id="val-lisere-dyn">0.9</span></label><input type="range"
+                                                                                  data-var="--lisere-dynamique-intensite" id="lisere-dyn" min="0" max="1" step="0.1" value="0.9">
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="control-group">
+                        <summary class="color-typo">Typographie</summary>
+                        <div class="group-content">
+                            <div class="input-row"><label>Texte</label><input type="text" id="text-input" maxlength="20" value="LET'S GO !"></div>
+                            <div class="input-row"><label>Taille <span class="val" id="val-font-size">45px</span></label><input type="range" data-var="--texte-taille-police"
+                                                                                  data-unit="px" id="font-size" min="10" max="150" value="45"></div>
+                        </div>
+                    </details>
+                </div>
+
+                <label for="sidebar-toggle" class="toggle-arrow"><span class="arrow-icon">◀</span></label>
+            </aside>
+
+            <main id="preview-zone">
+                <div class="bg-demo"></div>
+
+                <!-- On a ajouté les IDs (turb-pilule, turb-bord, turb-liquide) pour les cibler en JS -->
+                <svg style="width:0; height:0; position:absolute; pointer-events: none;">
+                    <filter id="svg-pilule-distort">
+                        <feTurbulence id="turb-pilule" type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="noise" />
+                        <feDisplacementMap id="svg-pilule-disp" in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                    <filter id="svg-bord-distort">
+                        <feTurbulence id="turb-bord" type="fractalNoise" baseFrequency="0.03" numOctaves="2" result="noise" />
+                        <feDisplacementMap id="svg-bord-disp" in="SourceGraphic" in2="noise" scale="35" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                    <filter id="svg-liquide-distort">
+                        <feTurbulence id="turb-liquide" type="fractalNoise" baseFrequency="0.01" numOctaves="1" result="noise" />
+                        <feDisplacementMap id="svg-liquide-disp" in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                </svg>
+
+                <div class="pill-wrapper" id="pill-container">
+                    <div class="glass-layer-bevel"></div>
+                    <div class="pill-inner-space">
+                        <div class="pillLiquid"></div>
+                        <div class="pillContent">
+                            <div class="pillText" id="dynamic-text"></div>
+                        </div>
+                    </div>
+
+                    <div class="glass-layer-center"></div>
+                    <div class="glass-dynamic-light"></div>
+                    <div class="glass-reflection"></div>
+                    <div class="glass-highlight"></div>
+                    <div class="glass-edge-glow"></div>
+                </div>
+            </main>
+        </div>
+
+        <div id="code-tooltip"></div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const tooltip = document.getElementById('code-tooltip');
+                const textContainer = document.getElementById('dynamic-text');
+                const textInput = document.getElementById('text-input');
+                const pillContainer = document.getElementById('pill-container');
+                let isTicking = false;
+
+                function updateTooltipText(input) {
+                    if (input.dataset.var) {
+                        tooltip.innerText = `${input.dataset.var}: ${input.value}${input.dataset.unit || ''};`;
+                    } else if (input.dataset.svgTarget) {
+                        // Affiche dynamiquement le bon tag SVG dans l'infobulle (feTurbulence ou feDisplacementMap)
+                        const tagName = input.dataset.svgTarget.startsWith('turb') ? 'feTurbulence' : 'feDisplacementMap';
+                        tooltip.innerText = `<!-- SVG Filter -->\n<${tagName} id="${input.dataset.svgTarget}"\n  ${input.dataset.svgAttr}="${input.value}"\n/>`;
+                    }
+                }
+
+                document.body.addEventListener('mousemove', (e) => {
+                    if (!isTicking) {
+                        requestAnimationFrame(() => {
+                            if (pillContainer) {
+                                const rect = pillContainer.getBoundingClientRect();
+                                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+                                document.documentElement.style.setProperty('--light-x', `${x}%`);
+                                document.documentElement.style.setProperty('--light-y', `${y}%`);
+                            }
+
+                            if (tooltip.classList.contains('show')) {
+                                tooltip.style.transform = `translate(${e.clientX + 15}px, ${e.clientY - 25}px)`;
+                            }
+                            isTicking = false;
+                        });
+                        isTicking = true;
+                    }
+                });
+
+                document.body.addEventListener('input', (e) => {
+                    const target = e.target;
+                    if (target.matches('[data-var]') || target.matches('[data-svg-target]')) {
+                        const val = target.value;
+                        if (target.dataset.var) document.documentElement.style.setProperty(target.dataset.var, val + (target.dataset.unit || ''));
+                        if (target.dataset.svgTarget) {
+                            const svgEl = document.getElementById(target.dataset.svgTarget);
+                            if (svgEl) {
+                                svgEl.setAttribute(target.dataset.svgAttr, val);
+                                // Le fameux hack anti-cache qui force le GPU à repeindre les SVG mis à jour
+                                document.body.style.transform = `scale(${1 + Math.random() * 0.0001})`;
+                                setTimeout(() => document.body.style.transform = 'none', 16);
+                            }
+                        }
+
+                        const display = document.getElementById(`val-${target.id}`);
+                        if (display) display.innerText = val + (target.dataset.displayUnit || target.dataset.unit || '');
+                        if (tooltip.classList.contains('show')) updateTooltipText(target);
+                    } else if (target.id === 'text-input') {
+                        generateText(target.value);
+                    }
+                });
+
+                document.body.addEventListener('mouseover', (e) => {
+                    const input = e.target.closest('.input-row')?.querySelector('[data-var], [data-svg-target]');
+                    if (input) { updateTooltipText(input); tooltip.classList.add('show'); }
+                });
+
+                document.body.addEventListener('mouseout', (e) => {
+                    const row = e.target.closest('.input-row');
+                    if (row && !row.contains(e.relatedTarget)) tooltip.classList.remove('show');
+                });
+
+                function generateText(textStr) {
+                    textContainer.innerHTML = '';
+                    textStr.substring(0, 20).trim().split(/\s+/).forEach(word => {
+                        const wordDiv = document.createElement('div');
+                        wordDiv.className = 'word';
+                        [...word].forEach(char => {
+                            const span = document.createElement('span');
+                            span.className = 'letter';
+                            span.innerHTML = char === ' ' ? '&nbsp;' : char;
+                            span.style.setProperty('--rx', (Math.random() * 2 - 1).toFixed(3));
+                            span.style.setProperty('--ry', (Math.random() * 2 - 1).toFixed(3));
+                            span.style.animationDelay = `${(Math.random() * -3).toFixed(2)}s`;
+                            wordDiv.appendChild(span);
+                        });
+                        textContainer.appendChild(wordDiv);
+                    });
+                }
+
+                generateText(textInput.value);
+                document.querySelectorAll('[data-var], [data-svg-target]').forEach(i => i.dispatchEvent(new Event('input', { bubbles: true })));
+            });
+        </script>
+    </body>
+
+</html>

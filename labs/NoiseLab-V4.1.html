@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Noise Lab</title>
+        <style>
+            /* =========================================================
+		   MOTEUR CSS GLOBAL
+		========================================================= */
+            :root {
+                --bg-dark: #0f0f16;
+                --panel-bg: #1a1a24;
+                --text-light: #e0e0e0;
+                --accent: #00ffcc;
+
+                /* Variables du Bruit SVG */
+                --svg-noise: none;
+                --noise-blend: overlay;
+                --noise-opacity: 0.5;
+
+                /* Variables des Filtres CSS */
+                --flt-hue: 0deg;
+                --flt-sat: 100%;
+                --flt-contrast: 100%;
+                --flt-invert: 0%;
+                --flt-blur: 0px;
+
+                /* Chaîne de filtres compilée */
+                --active-filters: hue-rotate(var(--flt-hue)) saturate(var(--flt-sat)) contrast(var(--flt-contrast)) invert(var(--flt-invert)) blur(var(--flt-blur));
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Segoe UI', Tahoma, sans-serif;
+                background-color: var(--bg-dark);
+                color: var(--text-light);
+                display: flex;
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            /* --- MISE EN PAGE --- */
+            .side-panel {
+                width: 400px;
+                background-color: var(--panel-bg);
+                padding: 30px;
+                box-shadow: 5px 0 20px rgba(0, 0, 0, 0.5);
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
+                z-index: 10;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                overflow-y: auto;
+            }
+
+            .main-area {
+                flex: 1;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: #000;
+                overflow: hidden;
+            }
+
+            /* =========================================================
+		   STRUCTURE DE COMPOSITION (FOND + BRUIT)
+		========================================================= */
+            .composition-container {
+                position: relative;
+                width: 80%;
+                height: 80%;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            }
+
+            /* 1. L'image de fond */
+            .base-image {
+                position: absolute;
+                inset: 0;
+                background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
+                transition: filter 0.2s;
+            }
+
+            /* 2. Le calque de Bruit par dessus */
+            .noise-overlay {
+                position: absolute;
+                inset: -50px;
+                /* Débordement pour éviter les bords coupés lors du blur */
+                background-image: var(--svg-noise);
+                mix-blend-mode: var(--noise-blend);
+                opacity: var(--noise-opacity);
+                pointer-events: none;
+                transition: filter 0.2s;
+            }
+
+            /* --- CIBLAGE DES FILTRES (Contrôlé par le JS) --- */
+            body[data-filter-target="image"] .base-image {
+                filter: var(--active-filters);
+            }
+
+            body[data-filter-target="noise"] .noise-overlay {
+                filter: var(--active-filters);
+            }
+
+            body[data-filter-target="both"] .composition-container {
+                filter: var(--active-filters);
+            }
+
+            /* --- COMPOSANTS UI --- */
+            .panel-section {
+                background: rgba(0, 0, 0, 0.2);
+                padding: 20px;
+                border-radius: 12px;
+                border-left: 4px solid var(--accent);
+            }
+
+            .panel-section h3 {
+                margin: 0 0 15px 0;
+                color: #fff;
+                font-size: 1.1rem;
+            }
+
+            .input-row {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 15px;
+            }
+
+            .input-header {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.9rem;
+                font-weight: bold;
+                color: #aaa;
+            }
+
+            .val {
+                color: var(--accent);
+                font-family: monospace;
+            }
+
+            input[type="range"] {
+                width: 100%;
+                cursor: pointer;
+                accent-color: var(--accent);
+            }
+
+            select {
+                background: #2a2a36;
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                padding: 8px 12px;
+                border-radius: 6px;
+                outline: none;
+                cursor: pointer;
+                width: 100%;
+            }
+
+            /* Toggle Switch pour le ciblage */
+            .target-switch {
+                display: flex;
+                background: #000;
+                border-radius: 8px;
+                overflow: hidden;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                margin-bottom: 20px;
+            }
+
+            .target-btn {
+                flex: 1;
+                background: transparent;
+                color: #888;
+                border: none;
+                padding: 10px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 0.85rem;
+                transition: all 0.2s;
+            }
+
+            .target-btn.active {
+                background: var(--accent);
+                color: #000;
+            }
+
+            /* Zone de code exportable */
+            .export-zone {
+                background: #000;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .export-zone h4 {
+                margin: 0 0 10px 0;
+                color: #0f0;
+            }
+
+            textarea {
+                width: 100%;
+                height: 120px;
+                background: transparent;
+                color: #aaa;
+                border: none;
+                font-family: monospace;
+                font-size: 0.75rem;
+                resize: none;
+                outline: none;
+                word-break: break-all;
+            }
+        </style>
+    </head>
+
+    <body data-filter-target="image">
+
+        <div class="side-panel">
+            <h2 style="color: var(--accent); margin: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                🔬 Moteur Hybride V2
+            </h2>
+
+            <div class="panel-section">
+                <h3>1. Moteur SVG (Texture)</h3>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Fréquence X (Grain)</span><span class="val" id="val-freq-x">0.8</span></div>
+                    <input type="range" id="in-freq-x" class="trigger-svg" min="0.01" max="5" step="0.01" value="0.8">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Fréquence Y (Grain)</span><span class="val" id="val-freq-y">0.8</span></div>
+                    <input type="range" id="in-freq-y" class="trigger-svg" min="0.01" max="5" step="0.01" value="0.8">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Opacité du Bruit</span><span class="val" id="val-opacity">0.3</span></div>
+                    <input type="range" id="in-opacity" min="0" max="1" step="0.05" value="0.3">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Mix Blend Mode</span></div>
+                    <select id="in-blend">
+                        <option value="normal">normal</option>
+                        <option value="overlay" selected>overlay (Classique)</option>
+                        <option value="color-burn">color-burn (Brûlé)</option>
+                        <option value="soft-light">soft-light (Doux)</option>
+                        <option value="difference">difference (Psychédélique)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel-section" style="border-color: #ff007f;">
+                <h3>2. Moteur de Filtres CSS</h3>
+
+                <div class="target-switch">
+                    <button class="target-btn active" data-target="image">Sur l'Image</button>
+                    <button class="target-btn" data-target="noise">Sur le Bruit</button>
+                    <button class="target-btn" data-target="both">Sur l'Ensemble</button>
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Hue Rotate (Teinte)</span><span class="val">0deg</span></div>
+                    <input type="range" class="trigger-css" data-var="--flt-hue" min="0" max="360" step="1" value="0" data-suffix="deg">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Saturate (Couleur)</span><span class="val">100%</span></div>
+                    <input type="range" class="trigger-css" data-var="--flt-sat" min="0" max="300" step="1" value="100" data-suffix="%">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Contrast</span><span class="val">100%</span></div>
+                    <input type="range" class="trigger-css" data-var="--flt-contrast" min="0" max="200" step="1" value="100" data-suffix="%">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Invert (Négatif)</span><span class="val">0%</span></div>
+                    <input type="range" class="trigger-css" data-var="--flt-invert" min="0" max="100" step="1" value="0" data-suffix="%">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-header"><span>Blur (Flou)</span><span class="val">0px</span></div>
+                    <input type="range" class="trigger-css" data-var="--flt-blur" min="0" max="20" step="1" value="0" data-suffix="px">
+                </div>
+            </div>
+
+            <div class="export-zone">
+                <h4>💻 Code CSS Final</h4>
+                <textarea id="output-css" readonly></textarea>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <div class="composition-container">
+                <div class="base-image"></div>
+                <div class="noise-overlay"></div>
+            </div>
+        </div>
+
+        <script>
+            const root = document.documentElement;
+            const outputCss = document.getElementById('output-css');
+
+            // Inputs SVG
+            const inFreqX = document.getElementById('in-freq-x');
+            const inFreqY = document.getElementById('in-freq-y');
+            const valFreqX = document.getElementById('val-freq-x');
+            const valFreqY = document.getElementById('val-freq-y');
+
+            // Inputs CSS
+            const inOpacity = document.getElementById('in-opacity');
+            const inBlend = document.getElementById('in-blend');
+            const valOpacity = document.getElementById('val-opacity');
+
+            // 🛠️ 1. GÉNÉRATION DU SVG
+            function generateSVGNoise() {
+                const freqX = inFreqX.value;
+                const freqY = inFreqY.value;
+
+                valFreqX.textContent = freqX;
+                valFreqY.textContent = freqY;
+
+                const svgString = `<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'>
+				<filter id='noiseFilter'>
+					<feTurbulence type='fractalNoise' baseFrequency='${freqX} ${freqY}' numOctaves='3' stitchTiles='stitch'/>
+				</filter>
+				<rect width='100%' height='100%' filter='url(#noiseFilter)' opacity='1'/>
+			</svg>`;
+
+                const encodedSvg = "data:image/svg+xml," + encodeURIComponent(svgString)
+                    .replace(/'/g, "%27")
+                    .replace(/"/g, "%22");
+
+                root.style.setProperty('--svg-noise', `url("${encodedSvg}")`);
+                updateExportCode();
+            }
+
+            document.querySelectorAll('.trigger-svg').forEach(el => {
+                el.addEventListener('input', generateSVGNoise);
+            });
+
+            // 🛠️ 2. GESTION DES FILTRES CSS
+            document.querySelectorAll('.trigger-css').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const varName = e.target.getAttribute('data-var');
+                    const suffix = e.target.getAttribute('data-suffix') || '';
+                    const val = e.target.value;
+
+                    root.style.setProperty(varName, val + suffix);
+
+                    // Update de l'affichage
+                    e.target.previousElementSibling.querySelector('.val').textContent = val + suffix;
+                    updateExportCode();
+                });
+            });
+
+            // Opacité et Blend Mode
+            inOpacity.addEventListener('input', (e) => {
+                root.style.setProperty('--noise-opacity', e.target.value);
+                valOpacity.textContent = e.target.value;
+                updateExportCode();
+            });
+
+            inBlend.addEventListener('input', (e) => {
+                root.style.setProperty('--noise-blend', e.target.value);
+                updateExportCode();
+            });
+
+            // 🛠️ 3. GESTION DU CIBLAGE (TOGGLE)
+            let currentTarget = "image";
+            document.querySelectorAll('.target-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    currentTarget = e.target.getAttribute('data-target');
+                    document.body.setAttribute('data-filter-target', currentTarget);
+                    updateExportCode();
+                });
+            });
+
+            // 🛠️ 4. EXPORT DU CODE CSS
+            function updateExportCode() {
+                const svgUrl = root.style.getPropertyValue('--svg-noise').trim() || 'url(...)';
+                const blend = inBlend.value;
+                const opacity = inOpacity.value;
+
+                // Récupération dynamique de la chaîne de filtre
+                const style = getComputedStyle(document.body);
+                const hue = style.getPropertyValue('--flt-hue');
+                const sat = style.getPropertyValue('--flt-sat');
+                const contrast = style.getPropertyValue('--flt-contrast');
+                const invert = style.getPropertyValue('--flt-invert');
+                const blur = style.getPropertyValue('--flt-blur');
+
+                const filterString = `hue-rotate(${hue}) saturate(${sat}) contrast(${contrast}) invert(${invert}) blur(${blur})`;
+
+                let cssCode =
+                    `/* === DÉCLARATION DU BRUIT === */
+:root {
+  --svg-noise: ${svgUrl};
+}
+
+/* === APPLICATION === */
+.base-image {
+  background: url('...');
+  ${currentTarget === 'image' || currentTarget === 'both' ? `filter: ${filterString};` : ''}
+}
+
+.noise-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: var(--svg-noise);
+  mix-blend-mode: ${blend};
+  opacity: ${opacity};
+  ${currentTarget === 'noise' ? `filter: ${filterString};` : ''}
+}`;
+
+                outputCss.value = cssCode;
+            }
+
+            // Initialisation
+            generateSVGNoise();
+        </script>
+    </body>
+
+</html>

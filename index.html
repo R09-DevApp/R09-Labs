@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="fr">
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terminal R09 | Hub Sphères Cristal Dynamiques</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+    <style>
+      /* =========================================
+           🎨 VARIABLES GLOBALES
+           ========================================= */
+      :root {
+        --bg-deep: #020b14;
+        --primary-cyan: #00f0ff;
+        --accent-orange: #ff6b00;
+        --accent-magenta: #ff007f;
+        --accent-gold: #ffc800;
+        --text-white: #e0f8ff;
+
+        --glass-border: rgba(0, 240, 255, 0.3);
+        --glass-bg: rgba(2, 11, 20, 0.3);
+
+        --easing-node: cubic-bezier(0.25, 1, 0.5, 1);
+      }
+
+      /* =========================================
+           RESET & ACCESSIBILITÉ
+           ========================================= */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        cursor: none;
+      }
+
+      body {
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        font-family: "Rajdhani", sans-serif;
+        color: var(--text-white);
+        perspective: 1000px;
+
+
+        background:
+          linear-gradient(160deg, rgb(238, 5, 255) 0%, rgba(2, 11, 20, 0.2) 20%, rgba(2, 11, 20, 0.2) 85%, var(--primary-cyan) 100%),
+          url('img/01.png') center/cover no-repeat fixed;
+        backdrop-filter: saturate(160%) blur(2px) brightness(0.8);
+        background-color: var(--bg-deep);
+
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* =========================================
+           🖱️ CURSEUR
+           ========================================= */
+      .cursor,
+      .cursor-trail {
+        position: fixed;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 9999;
+        transform-origin: center;
+        will-change: transform;
+      }
+
+      .cursor {
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid var(--accent-orange);
+        border-radius: 50%;
+        transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
+        transform: translate3d(var(--cx, 50vw), var(--cy, 50vh), 0) scale(var(--c-scale, 1));
+      }
+
+      .cursor.is-hovering {
+        --c-scale: 3;
+        background-color: rgba(0, 240, 255, 0.1);
+        border-color: var(--hover-color, var(--primary-cyan));
+        box-shadow: 0 0 15px var(--hover-color, rgba(0, 240, 255, 0.5));
+      }
+
+      .cursor-trail {
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        background: var(--accent-magenta);
+        border-radius: 50%;
+        z-index: 9998;
+        box-shadow: 0 0 10px var(--accent-magenta);
+        transform: translate3d(var(--tx, 50vw), var(--ty, 50vh), 0);
+      }
+
+      /* =========================================
+           🏗️ MACRO-LAYOUT (Centré Verticalement)
+           ========================================= */
+      .app-layout {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: clamp(40px, 8vh, 100px);
+        height: 100vh;
+        width: 100vw;
+        position: relative;
+        z-index: 10;
+      }
+
+      .header-wrapper {
+        perspective: 500px;
+      }
+
+      /* =========================================
+           🖥️ HEADER / MENU FIXE & STABLE
+           ========================================= */
+      .terminal-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+
+        width: clamp(300px, 80vw, 450px);
+        height: 110px;
+        border-radius: 16px;
+
+        will-change: opacity, border-color, box-shadow, background-color;
+        transition:
+          border-color 0.4s ease,
+          box-shadow 0.4s ease,
+          background-color 0.4s ease;
+      }
+
+      .terminal-header::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: 15%;
+        right: 15%;
+        height: 10px;
+        background: linear-gradient(90deg, transparent, var(--hover-color, rgba(255, 255, 255, 0.2)), transparent);
+        transition: background 0.4s ease;
+        z-index: 2;
+      }
+
+      .terminal-header.default-state {
+        background: rgba(2, 11, 20, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .terminal-header.card-state {
+        background: rgba(2, 11, 20, 0.85);
+        border: 1px solid var(--hover-color, var(--primary-cyan));
+        box-shadow:
+          0 20px 40px rgba(0, 0, 0, 0.6),
+          0 0 25px var(--hover-color-alpha-20, rgba(0, 240, 255, 0.2)),
+          inset 0 0 15px rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+      }
+
+      .header-sys-ready {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1rem;
+        margin-bottom: 6px;
+        color: var(--hover-color, var(--primary-cyan));
+        letter-spacing: 2px;
+        text-shadow: 0 0 8px var(--hover-color-alpha-50, rgba(0, 240, 255, 0.5));
+        animation: textFadeIn 0.3s ease-out forwards;
+      }
+
+      .header-title {
+        font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+        font-weight: 700;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+        color: #fff;
+        margin-bottom: 6px;
+        letter-spacing: 1px;
+        animation: textFadeIn 0.4s ease-out forwards;
+      }
+
+      .header-version {
+        font-family: "JetBrains Mono", monospace;
+        color: var(--text-white);
+        background: rgba(255, 255, 255, 0.08);
+        padding: 3px 12px;
+        border-radius: 30px;
+        font-size: 1rem;
+        letter-spacing: 1.5px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+        animation: textFadeIn 0.5s ease-out forwards;
+      }
+
+      .header-default-text {
+        font-family: "JetBrains Mono", monospace;
+        color: rgba(255, 255, 255, 0.8);
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: textFadeIn 0.8s ease-out forwards;
+      }
+
+      @keyframes textFadeIn {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+
+      .lab-grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: clamp(15px, 3vh, 40px);
+        padding: 0 10vw;
+        align-content: center;
+        justify-items: center;
+        width: 100%;
+      }
+
+      /* =========================================
+           🧩 COMPOSANTS (Bulle Cristal & Pop)
+           ========================================= */
+
+      .node-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: float-orb 5s ease-in-out infinite;
+        animation-delay: var(--float-delay, 0s);
+        will-change: transform;
+      }
+
+      @keyframes float-orb {
+
+        0%,
+        100% {
+          transform: translateX(0) translateY(0);
+
+        }
+
+        50% {
+          transform: translateX(-3px) translateY(-15px);
+        }
+      }
+
+      .node-anchor {
+        position: relative;
+        width: clamp(5vw, 120px, 150px);
+        height: clamp(5vw, 120px, 150px);
+        margin: 5vw 5vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-decoration: none;
+        transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+        transform-style: preserve-3d;
+        transition: transform 0.4s linear;
+        outline: none;
+      }
+
+
+      .node-layer-glass {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(10px);
+
+        -webkit-backdrop-filter: blur(10px);
+        transition: border-color 1s linear(0.0001, 0.1286, 0.726, 0.852, 0.9443,
+            1, 0.9649, 0.9728, 0.900, 0.8058,
+            0.9240, 0.9591, 1), box-shadow 0.4s var(--easing-node), border-width 0.4s var(--easing-node);
+      }
+
+
+      .node-layer-glow {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+
+        background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), var(--lab-color, rgba(0, 240, 255, 0.4)) 0%, transparent 70%);
+        opacity: var(--glow-opacity, 0);
+        transition: opacity 1s var(--easing-node);
+        pointer-events: none;
+
+      }
+
+
+      .node-icon {
+        font-size: clamp(5rem, 5vw, 3.5rem);
+        z-index: 4;
+        transform: translateZ(var(--tz, 0px)) scale(var(--icon-scale, 1));
+        transition: transform 0.8s linear(0.0001, 0.1286, 0.726, 0.852, 0.9443,
+            1, 0.9649, 0.9728, 0.900, 0.8058,
+            0.9240, 0.9591, 1),
+          filter 2s var(--easing-node), z-index 0.3s;
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.946));
+      }
+
+
+      .node-layer-front-glass {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        z-index: 5;
+        pointer-events: none;
+
+        backdrop-filter: blur(0px);
+
+        -webkit-backdrop-filter: blur(0x);
+
+        background:
+          radial-gradient(ellipse at 25% 20%, rgba(254, 214, 255, 0.549) 0%, rgba(251, 155, 254, 0.388) 4%, rgba(251, 132, 255, 0.375) 8%, rgba(235, 78, 241, 0.236) 20%, rgba(255, 255, 255, 0.15) 50%, transparent 90%),
+          radial-gradient(circle at 75% 85%, rgba(0, 238, 255, 0.354) 0%, rgba(0, 238, 255, 0.238) 6%, transparent 30%);
+
+        box-shadow:
+          inset 0 0 3px rgb(255, 255, 255),
+          inset 1px 2px 3px rgba(242, 193, 255, 0.916),
+          inset -3px -3px 3px rgb(11, 255, 222);
+
+        opacity: 1;
+        transition: opacity 1s var(--easing-node);
+      }
+
+      /* =========================================
+           ÉTATS INTERACTIFS (L'effet "Pop" Dynamique)
+           ========================================= */
+      .node-anchor:hover .node-layer-glass,
+      .node-anchor:focus-visible .node-layer-glass {
+
+        border-color: var(--lab-color, var(--primary-cyan));
+        border-width: 15px;
+        scale: 1.4;
+
+        box-shadow:
+          0 15px 35px rgba(0, 0, 0, 0.8),
+          inset 0 0 15px var(--lab-color-alpha-50, rgba(157, 80, 255, 0.5)),
+          0 0 20px var(--lab-color-alpha-30, rgba(0, 209, 255, 0.3));
+      }
+
+      .node-anchor:hover,
+      .node-anchor:focus-visible {
+        --glow-opacity: 1;
+        --tz: 80px;
+        --icon-scale: 2;
+        z-index: 40;
+      }
+
+      .node-anchor:hover .node-icon,
+      .node-anchor:focus-visible .node-icon {
+
+        filter: drop-shadow(0 15px 25px var(--lab-color, rgba(255, 107, 0, 0.9)));
+      }
+
+      .node-anchor:hover .node-layer-front-glass,
+      .node-anchor:focus-visible .node-layer-front-glass {
+        opacity: 0;
+      }
+
+      /* =========================================
+           ÉCO-CONCEPTION
+           ========================================= */
+      @media (prefers-reduced-motion: reduce) {
+
+        *,
+        ::before,
+        ::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+
+        .node-anchor,
+        .node-wrapper {
+          transform: none !important;
+        }
+
+        .cursor,
+        .cursor-trail {
+          display: none !important;
+        }
+
+        * {
+          cursor: auto !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div class="cursor" id="cursor" aria-hidden="true"></div>
+    <div class="cursor-trail" id="cursorTrail" aria-hidden="true"></div>
+
+    <div class="app-layout">
+      <header class="header-wrapper">
+        <div id="dynamic-header" class="terminal-header default-state" aria-live="polite">
+          <span class="header-default-text">
+            <span style="color: var(--accent-orange); font-size: 1.2rem;">◈</span>
+            Ꮢ09 Lab's<br>SÉLECTION DU MODULE
+            <span style="color: var(--accent-orange); font-size: 1.2rem;">◈</span>
+          </span>
+        </div>
+      </header>
+
+      <main class="lab-grid-container" id="lab-grid"></main>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+
+        const Store = {
+          mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+          cursor: { cx: window.innerWidth / 2, cy: window.innerHeight / 2, tx: window.innerWidth / 2, ty: window.innerHeight / 2 },
+          activeNode: null,
+          isHoveringNode: false,
+          reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        };
+
+        const labsData = [
+          { id: 'anim', title: 'Animation Lab', version: 'v13.2', icon: '🎬', link: 'labs/AnimationLab-V13.2.html', color: '#ff2d7d' },
+          { id: 'color', title: 'Color Blending', version: 'v1.4', icon: '🎨', link: 'labs/ColorBlendingLab-V1.4.html', color: '#00d1ff' },
+          { id: 'glass1', title: 'Glass Morphism', version: 'v8.3', icon: '🪟', link: 'labs/GlassMorphismLab-V8.3.html', color: '#ffffff' },
+          { id: 'glass2', title: 'Glass Colored', version: 'v24.3', icon: '🌈', link: 'labs/GlassMorphismV24.3-Colored.html', color: '#9d50ff' },
+          { id: 'glass3', title: 'Glass Perfect', version: 'v25.2', icon: '✨', link: 'labs/GlassMorphismV25.2-GlassPerfect.html', color: '#ffc800' },
+          { id: 'glitch', title: 'Easing Lab', version: 'v2.4', icon: '🕓', link: 'labs/EasingLab-V2.4.html', color: '#00ff00' },
+          { id: '3d', title: 'Layers 3D Lab', version: 'v20.1', icon: '🧊', link: 'labs/Layers3DLab-V20.1.html', color: '#00f0ff' },
+          { id: 'mask', title: 'Mask Lab', version: 'v0.7', icon: '🎭', link: 'labs/MaskLab-V0.7.html', color: '#ff6b00' },
+          { id: 'parallax', title: 'Parallax Lab', version: 'v3.4', icon: '🌠', link: 'labs/ParallaxLab-V3.4.html', color: '#ff007f' },
+          { id: 'perf', title: 'Perf CSS vs JS', version: 'v1.1', icon: '⚡', link: 'labs/PerfCSSvsJSLab-V1.1.html', color: '#ffff00' },
+          { id: 'svg', title: 'SVG Filter Lab', version: 'v0.6', icon: '🖌️', link: 'labs/SVGFilterLab-V0.6.html', color: '#00aaff' },
+          { id: 'noise', title: 'Noise Lab', version: 'v4.1', icon: '📺', link: 'labs/NoiseLab-V4.1.html', color: '#888888' }
+        ];
+
+        const gridContainer = document.getElementById('lab-grid');
+        const headerEl = document.getElementById('dynamic-header');
+        const cursorEl = document.getElementById('cursor');
+
+        function renderGrid() {
+          gridContainer.innerHTML = labsData.map((lab, index) => {
+            return `
+                    <div class="node-wrapper" style="--float-delay: ${index * -0.4}s; --lab-color: ${lab.color};">
+                        <a href="${lab.link}" class="node-anchor" data-id="${lab.id}" aria-label="Ouvrir le module ${lab.title}">
+                            <span class="node-layer-glass" aria-hidden="true"></span>
+                            <span class="node-layer-glow" aria-hidden="true"></span>
+                            <span class="node-icon" aria-hidden="true">${lab.icon}</span>
+                            <span class="node-layer-front-glass" aria-hidden="true"></span>
+                        </a>
+                    </div>
+                    `
+          }).join('');
+        }
+        renderGrid();
+
+        document.addEventListener('mousemove', (e) => {
+          Store.mouse.x = e.clientX;
+          Store.mouse.y = e.clientY;
+        }, { passive: true });
+
+        gridContainer.addEventListener('mousemove', (e) => {
+          const node = e.target.closest('.node-anchor');
+          if (node) {
+            Store.activeNode = node;
+            if (!Store.isHoveringNode) updateHeaderState(node, true);
+          } else if (Store.activeNode) {
+            resetActiveNode();
+          }
+        });
+
+        gridContainer.addEventListener('mouseleave', resetActiveNode);
+
+        function hexToRgbA(hex, alpha) {
+          let c;
+          if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+            c = hex.substring(1).split('');
+            if (c.length == 3) {
+              c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+            }
+            c = '0x' + c.join('');
+            return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + alpha + ')';
+          }
+          return hex;
+        }
+
+        function updateHeaderState(node, isHovering) {
+          Store.isHoveringNode = isHovering;
+
+          if (isHovering) {
+            const labId = node.getAttribute('data-id');
+            const labData = labsData.find(l => l.id === labId);
+
+            const color = labData.color;
+            document.documentElement.style.setProperty('--hover-color', color);
+            document.documentElement.style.setProperty('--hover-color-alpha-20', hexToRgbA(color, 0.2));
+            document.documentElement.style.setProperty('--hover-color-alpha-50', hexToRgbA(color, 0.5));
+
+            if (cursorEl) cursorEl.classList.add('is-hovering');
+
+            headerEl.className = 'terminal-header card-state';
+            headerEl.innerHTML = `
+                        <div class="header-sys-ready">SYS_READY // ${labData.id.toUpperCase()}</div>
+                        <div class="header-title">${labData.title}</div>
+                        <div class="header-version">${labData.version}</div>
+                    `;
+          } else {
+            if (cursorEl) cursorEl.classList.remove('is-hovering');
+
+            document.documentElement.style.removeProperty('--hover-color');
+            document.documentElement.style.removeProperty('--hover-color-alpha-20');
+            document.documentElement.style.removeProperty('--hover-color-alpha-50');
+
+            headerEl.className = 'terminal-header default-state';
+            headerEl.innerHTML = `
+                        <span class="header-default-text">
+                            <span style="color: var(--accent-orange); font-size: 1.2rem;">◈</span>
+                            SÉLECTION DU MODULE
+                            <span style="color: var(--accent-orange); font-size: 1.2rem;">◈</span>
+                        </span>
+                    `;
+          }
+        }
+
+        function resetActiveNode() {
+          if (Store.activeNode) {
+            Store.activeNode.style.cssText = '';
+            updateHeaderState(Store.activeNode, false);
+            Store.activeNode = null;
+          }
+        }
+
+        function renderLoop() {
+          if (Store.reducedMotion) return;
+
+          Store.cursor.cx += (Store.mouse.x - Store.cursor.cx) * 0.3;
+          Store.cursor.cy += (Store.mouse.y - Store.cursor.cy) * 0.3;
+          Store.cursor.tx += (Store.mouse.x - Store.cursor.tx) * 0.15;
+          Store.cursor.ty += (Store.mouse.y - Store.cursor.ty) * 0.15;
+
+          document.documentElement.style.setProperty('--cx', `${Store.cursor.cx}px`);
+          document.documentElement.style.setProperty('--cy', `${Store.cursor.cy}px`);
+          document.documentElement.style.setProperty('--tx', `${Store.cursor.tx}px`);
+          document.documentElement.style.setProperty('--ty', `${Store.cursor.ty}px`);
+
+          if (Store.activeNode) {
+            const rect = Store.activeNode.getBoundingClientRect();
+            const localX = Store.mouse.x - rect.left;
+            const localY = Store.mouse.y - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            const rotateX = ((localY - centerY) / centerY) * -25;
+            const rotateY = ((localX - centerX) / centerX) * 25;
+            const percentX = (localX / rect.width) * 100;
+            const percentY = (localY / rect.height) * 100;
+
+            Store.activeNode.style.setProperty('--rx', `${rotateX}deg`);
+            Store.activeNode.style.setProperty('--ry', `${rotateY}deg`);
+            Store.activeNode.style.setProperty('--mx', `${percentX}%`);
+            Store.activeNode.style.setProperty('--my', `${percentY}%`);
+          }
+
+          requestAnimationFrame(renderLoop);
+        }
+
+        requestAnimationFrame(renderLoop);
+      });
+    </script>
+  </body>
+
+</html>

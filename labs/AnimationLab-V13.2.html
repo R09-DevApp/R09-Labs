@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ultimate AnimLab</title>
+        <style>
+            :root {
+                --bg-main: #1e1e1e;
+                --bg-panel: #252526;
+                --bg-track: #2d2d2d;
+                --border-color: #3e3e42;
+                --text-main: #cccccc;
+                --accent: #007acc;
+                --keyframe-color: #dcdcaa;
+
+                --color-playback: #ff4757;
+                --color-cursor: #1e90ff;
+                --color-cursor-draft: #00ced1;
+                --color-key: #f1c40f;
+
+                --track-label-width: 220px;
+                --header-height: 40px;
+                --track-height: 30px;
+                --timeline-height: 35vh;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Consolas', 'Courier New', monospace;
+                background: var(--bg-main);
+                color: var(--text-main);
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                overflow: hidden;
+                font-size: 12px;
+                user-select: none;
+            }
+
+            /* --- DOCKING LAYOUT SYSTEM --- */
+            #top-section {
+                display: flex;
+                flex: 1;
+                height: calc(100vh - var(--timeline-height));
+                min-height: 200px;
+                position: relative;
+            }
+
+            .split-row {
+                display: flex;
+                flex-direction: row;
+                flex: 1;
+                overflow: hidden;
+                gap: 2px;
+                background: var(--border-color);
+            }
+
+            .split-col {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                overflow: hidden;
+                gap: 2px;
+                background: var(--border-color);
+            }
+
+            .dockable-panel {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                background: #111;
+                position: relative;
+                overflow: hidden;
+                min-width: 150px;
+                min-height: 100px;
+            }
+
+            #drop-indicator {
+                position: absolute;
+                background: rgba(0, 122, 204, 0.3);
+                border: 2px solid var(--accent);
+                pointer-events: none;
+                z-index: 9999;
+                display: none;
+                transition: all 0.1s ease;
+            }
+
+            /* --- VIEWS --- */
+            .view-header {
+                height: 25px;
+                background: #1e1e1e;
+                border-bottom: 1px solid #333;
+                display: flex;
+                align-items: center;
+                padding: 0 10px;
+                font-weight: bold;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                gap: 8px;
+                color: #aaa;
+                z-index: 10;
+                justify-content: space-between;
+                cursor: grab;
+            }
+
+            .view-header:active {
+                cursor: grabbing;
+            }
+
+            .view-title-group {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                pointer-events: none;
+            }
+
+            .view-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+            }
+
+            .camera-controls {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .zoom-level {
+                font-family: monospace;
+                color: var(--accent);
+                min-width: 35px;
+                text-align: right;
+            }
+
+            .btn-action {
+                background: transparent;
+                border: 1px solid #444;
+                color: #aaa;
+                border-radius: 3px;
+                cursor: pointer;
+                padding: 2px 5px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+
+            .btn-action:hover {
+                background: #333;
+                color: #fff;
+                border-color: #666;
+            }
+
+            .btn-apply-all {
+                background: rgba(0, 206, 209, 0.2);
+                border-color: var(--color-cursor-draft);
+                color: var(--color-cursor-draft);
+                display: none;
+            }
+
+            .btn-apply-all:hover {
+                background: var(--color-cursor-draft);
+                color: #000;
+                border-color: var(--color-cursor-draft);
+            }
+
+            .btn-sync-all {
+                color: var(--color-playback);
+                border-color: rgba(255, 71, 87, 0.5);
+            }
+
+            .btn-sync-all:hover {
+                background: var(--color-playback);
+                color: #fff;
+                border-color: var(--color-playback);
+            }
+
+            .view-canvas {
+                flex: 1;
+                position: relative;
+                overflow: hidden;
+                background-color: #111;
+            }
+
+            .camera-container {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+                background-size: 50px 50px;
+                background-position: center;
+            }
+
+            .anim-target {
+                position: absolute;
+                top: -50px;
+                left: -50px;
+                width: 100px;
+                height: 100px;
+                background: var(--accent);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                color: white;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+                will-change: transform, opacity, filter;
+            }
+
+            /* --- INSPECTEUR & KEY VIEW --- */
+            #inspector {
+                background: var(--bg-panel);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            #inspector-content {
+                padding: 15px;
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            #inspector h3 {
+                margin-top: 0;
+                color: #fff;
+                font-size: 14px;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 10px;
+            }
+
+            #key-view-wrapper {
+                height: 200px;
+                flex-shrink: 0;
+                border-bottom: 2px solid var(--border-color);
+                display: none;
+                flex-direction: column;
+            }
+
+            .input-group {
+                margin-bottom: 15px;
+            }
+
+            .input-group label {
+                display: flex;
+                justify-content: space-between;
+                color: #aaa;
+                font-size: 11px;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+            }
+
+            .input-group input[type="text"].raw-input,
+            .input-group select {
+                width: 100%;
+                padding: 6px;
+                background: #111;
+                color: #fff;
+                border: 1px solid #444;
+                border-radius: 3px;
+                box-sizing: border-box;
+                font-family: monospace;
+            }
+
+            .input-group input[type="text"].raw-input:focus,
+            .input-group select:focus {
+                border-color: var(--accent);
+                outline: none;
+            }
+
+            .smart-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                background: rgba(0, 0, 0, 0.2);
+                padding: 12px;
+                border-radius: 4px;
+                border: 1px solid #333;
+                margin-bottom: 15px;
+            }
+
+            .smart-item {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .smart-item>label {
+                font-size: 10px;
+                color: #888;
+                margin: 0;
+                text-transform: uppercase;
+                font-weight: bold;
+            }
+
+            .slider-group {
+                display: grid;
+                grid-template-columns: 45px 55px 1fr;
+                align-items: center;
+                gap: 8px;
+                background: #111;
+                border: 1px solid #444;
+                border-radius: 3px;
+                padding: 4px 8px;
+            }
+
+            .val-display {
+                font-family: monospace;
+                font-size: 11px;
+                color: var(--accent);
+                cursor: text;
+                text-align: right;
+                border-bottom: 1px dashed transparent;
+                transition: border 0.2s;
+                overflow: hidden;
+            }
+
+            .val-display:hover {
+                border-bottom: 1px dashed var(--accent);
+            }
+
+            .inline-edit {
+                width: 100%;
+                background: transparent;
+                border: none;
+                color: #fff;
+                font-family: monospace;
+                font-size: 11px;
+                text-align: right;
+                outline: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .unit-select {
+                background: #222;
+                color: #aaa;
+                border: 1px solid #444;
+                border-radius: 3px;
+                padding: 2px;
+                font-size: 10px;
+                outline: none;
+                cursor: pointer;
+            }
+
+            .unit-select:focus {
+                border-color: var(--accent);
+                color: #fff;
+            }
+
+            .slider-group input[type="range"] {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 100%;
+                height: 3px;
+                border-radius: 2px;
+                background: #333;
+                outline: none;
+                cursor: ew-resize;
+            }
+
+            .slider-group input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #fff;
+                cursor: ew-resize;
+                box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            }
+
+            .slider-group input[type="range"]:active::-webkit-slider-thumb {
+                background: var(--accent);
+                transform: scale(1.2);
+            }
+
+            #inspector-actions {
+                display: none;
+                gap: 10px;
+                margin-top: 20px;
+                padding-top: 15px;
+                border-top: 1px dashed var(--border-color);
+            }
+
+            #inspector-actions button {
+                flex: 1;
+                padding: 8px;
+                border: none;
+                border-radius: 3px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+
+            #btn-cancel {
+                background: #444;
+                color: #fff;
+            }
+
+            #btn-cancel:hover {
+                background: #555;
+            }
+
+            #btn-apply {
+                background: var(--accent);
+                color: #fff;
+            }
+
+            #btn-apply:hover {
+                background: #0098ff;
+            }
+
+            /* --- TIMELINE --- */
+            .resizer-h {
+                height: 4px;
+                background: var(--border-color);
+                cursor: row-resize;
+                z-index: 100;
+                transition: background 0.2s;
+            }
+
+            .resizer-h:hover,
+            .resizer-h.dragging {
+                background: var(--accent);
+            }
+
+            #timeline-editor {
+                height: var(--timeline-height);
+                min-height: 150px;
+                max-height: 80vh;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg-panel);
+            }
+
+            .toolbar {
+                height: var(--header-height);
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                padding: 0 15px;
+                background: #333333;
+                border-bottom: 1px solid var(--border-color);
+                gap: 10px;
+            }
+
+            .toolbar button {
+                background: transparent;
+                border: 1px solid var(--border-color);
+                color: var(--text-main);
+                padding: 5px 15px;
+                cursor: pointer;
+                border-radius: 3px;
+            }
+
+            .toolbar button:hover {
+                background: var(--border-color);
+                color: #fff;
+            }
+
+            #time-display {
+                font-weight: bold;
+                color: var(--color-playback);
+                margin-left: 10px;
+                font-variant-numeric: tabular-nums;
+                font-size: 14px;
+            }
+
+            .timeline-container {
+                display: flex;
+                flex: 1;
+                overflow: hidden;
+            }
+
+            .track-labels {
+                width: var(--track-label-width);
+                border-right: 1px solid var(--border-color);
+                background: var(--bg-panel);
+                display: flex;
+                flex-direction: column;
+                z-index: 10;
+            }
+
+            .track-header {
+                height: var(--track-height);
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                padding-left: 15px;
+                border-bottom: 1px solid var(--border-color);
+                background: #2a2d2e;
+                font-weight: bold;
+                color: #fff;
+            }
+
+            #labels-container {
+                flex: 1;
+                overflow-y: hidden;
+            }
+
+            .track-label {
+                height: var(--track-height);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding-left: 15px;
+                padding-right: 10px;
+                border-bottom: 1px solid var(--border-color);
+                color: #d4d4d4;
+            }
+
+            .btn-del-track {
+                background: transparent;
+                border: none;
+                color: #888;
+                cursor: pointer;
+                font-size: 14px;
+                padding: 0 5px;
+            }
+
+            .btn-del-track:hover {
+                color: #f44336;
+            }
+
+            .add-track-zone {
+                padding: 10px;
+                border-top: 1px solid var(--border-color);
+                background: var(--bg-panel);
+                flex-shrink: 0;
+            }
+
+            .add-track-zone input {
+                width: 100%;
+                padding: 6px;
+                background: #111;
+                color: #fff;
+                border: 1px solid #444;
+                box-sizing: border-box;
+                border-radius: 3px;
+            }
+
+            .timeline-grid {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg-main);
+                overflow: auto;
+            }
+
+            .ruler {
+                height: var(--track-height);
+                background: #2a2d2e;
+                border-bottom: 1px solid var(--border-color);
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                flex-shrink: 0;
+            }
+
+            .grid-content {
+                position: relative;
+            }
+
+            #tracks-container {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .track {
+                height: var(--track-height);
+                border-bottom: 1px solid var(--border-color);
+                position: relative;
+                background: var(--bg-track);
+                cursor: pointer;
+            }
+
+            .track:nth-child(even) {
+                background: #2a2a2a;
+            }
+
+            /* --- KEYFRAMES --- */
+            .keyframe {
+                position: absolute;
+                top: 50%;
+                width: 12px;
+                height: 12px;
+                background: var(--keyframe-color);
+                transform: translate(-50%, -50%) rotate(45deg);
+                cursor: ew-resize;
+                z-index: 25;
+                transition: transform 0.1s, background 0.1s;
+            }
+
+            .keyframe:hover {
+                transform: translate(-50%, -50%) rotate(45deg) scale(1.3);
+                background: #fff;
+            }
+
+            .keyframe.selected {
+                background: #fff;
+                box-shadow: 0 0 8px #fff;
+                transform: translate(-50%, -50%) rotate(45deg) scale(1.3);
+                z-index: 30;
+            }
+
+            .keyframe.drafted {
+                background: var(--color-cursor-draft);
+            }
+
+            /* --- PLAYHEADS --- */
+            #drag-guide {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 1px;
+                border-left: 1px dashed rgba(255, 255, 255, 0.4);
+                z-index: 15;
+                pointer-events: none;
+                display: none;
+            }
+
+            .playhead {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 1px;
+                z-index: 20;
+                pointer-events: none;
+            }
+
+            .playhead::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -5px;
+                width: 11px;
+                height: 11px;
+                clip-path: polygon(0 0, 100% 0, 50% 100%);
+            }
+
+            #ph-playback {
+                background: var(--color-playback);
+                z-index: 21;
+            }
+
+            #ph-playback::before {
+                background: var(--color-playback);
+            }
+
+            #ph-cursor {
+                background: var(--color-cursor);
+                z-index: 20;
+                opacity: 0.8;
+            }
+
+            #ph-cursor::before {
+                background: var(--color-cursor);
+            }
+
+            #ph-key {
+                background: var(--color-key);
+                z-index: 22;
+                display: none;
+            }
+
+            #ph-key::before {
+                background: var(--color-key);
+            }
+
+            #scrub-zone {
+                position: absolute;
+                top: 0;
+                height: var(--track-height);
+                left: 0;
+                right: 0;
+                z-index: 35;
+                cursor: text;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div id="drop-indicator"></div>
+
+        <div id="top-section">
+            <div class="split-row" id="root-split"></div>
+
+            <div id="inspector" class="dockable-panel">
+                <div class="view-header" draggable="true" data-panel-id="inspector">
+                    <div class="view-title-group">Inspecteur Intelligent</div>
+                </div>
+
+                <div id="key-view-wrapper"></div>
+
+                <div id="inspector-content">
+                    <div id="kf-details">
+                        <p style="color:#888; font-style:italic; padding-bottom:15px; border-bottom:1px dashed var(--border-color);">Sélectionnez une keyframe.</p>
+                    </div>
+                    <div id="inspector-actions">
+                        <button id="btn-cancel">Annuler</button>
+                        <button id="btn-apply">Valider (Cette Frame)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="resizer-h" id="resizer-timeline"></div>
+
+        <div id="timeline-editor">
+            <div class="toolbar">
+                <button id="btn-play">Jouer / Pause</button>
+                <button id="btn-stop">Stop</button>
+                <span id="time-display">00:00:000</span>
+            </div>
+            <div class="timeline-container">
+                <div class="track-labels">
+                    <div class="track-header"><span>Timeline Globale</span></div>
+                    <div id="labels-container"></div>
+                    <div class="add-track-zone">
+                        <input type="text" id="new-track-input" list="css-properties" placeholder="Ajouter (ex: opacity)...">
+                        <datalist id="css-properties">
+                            <option value="transform"></option>
+                            <option value="filter"></option>
+                            <option value="opacity"></option>
+                            <option value="border-radius"></option>
+                            <option value="background-color"></option>
+                        </datalist>
+                    </div>
+                </div>
+                <div class="timeline-grid" id="timeline-scroll">
+                    <div class="ruler">
+                        <div id="scrub-zone"></div>
+                    </div>
+                    <div class="grid-content">
+                        <div id="ph-playback" class="playhead" style="left: 0px;"></div>
+                        <div id="ph-cursor" class="playhead" style="left: 0px;"></div>
+                        <div id="ph-key" class="playhead" style="left: 0px;"></div>
+                        <div id="drag-guide"></div>
+                        <div id="tracks-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const rootSplit = document.getElementById('root-split');
+                const inspector = document.getElementById('inspector');
+                const keyViewWrapper = document.getElementById('key-view-wrapper');
+                const scrubZone = document.getElementById('scrub-zone');
+                const dragGuide = document.getElementById('drag-guide');
+                const timeDisplay = document.getElementById('time-display');
+                const kfDetails = document.getElementById('kf-details');
+                const inspectorActions = document.getElementById('inspector-actions');
+                const newTrackInput = document.getElementById('new-track-input');
+                const labelsContainer = document.getElementById('labels-container');
+                const tracksContainer = document.getElementById('tracks-container');
+                const timelineScroll = document.getElementById('timeline-scroll');
+                const dropIndicator = document.getElementById('drop-indicator');
+
+                const TOTAL_DURATION = 3000;
+                const TIMELINE_WIDTH = 1000;
+
+                document.querySelector('.ruler').style.width = `${TIMELINE_WIDTH}px`;
+                scrubZone.style.width = `${TIMELINE_WIDTH}px`;
+                timelineScroll.addEventListener('scroll', () => { labelsContainer.scrollTop = timelineScroll.scrollTop; });
+
+                // --- GESTION DU RESIZER TIMELINE ---
+                const resizerH = document.getElementById('resizer-timeline');
+                let isResizingH = false;
+                resizerH.addEventListener('mousedown', () => { isResizingH = true; resizerH.classList.add('dragging'); document.body.style.cursor = 'row-resize'; });
+                document.addEventListener('mousemove', (e) => {
+                    if (isResizingH) document.documentElement.style.setProperty('--timeline-height', `${Math.max(150, Math.min(document.body.clientHeight - e.clientY, window.innerHeight * 0.8))}px`);
+                });
+                document.addEventListener('mouseup', () => {
+                    isResizingH = false; resizerH.classList.remove('dragging'); document.body.style.cursor = 'default';
+                });
+
+                // --- CONFIGURATION DES VUES ---
+                const viewsConfig = {
+                    playback: { id: 'playback', label: 'Animation', group: 'playback', color: 'var(--color-playback)', span: 2, isPlaying: false, time: 0, anims: [], cameraEl: null, targetEl: null, phEl: document.getElementById('ph-playback'), useDraft: false, cam: { scale: 1, x: 0, y: 0 } },
+                    cursorBefore: { id: 'cursorBefore', label: 'Cursor Orig', group: 'cursor', color: 'var(--color-cursor)', span: 1, isPlaying: false, time: 0, anims: [], cameraEl: null, targetEl: null, phEl: document.getElementById('ph-cursor'), useDraft: false, cam: { scale: 1, x: 0, y: 0 } },
+                    cursorAfter: { id: 'cursorAfter', label: 'Cursor Draft', group: 'cursor', color: 'var(--color-cursor-draft)', span: 1, isPlaying: false, time: 0, anims: [], cameraEl: null, targetEl: null, phEl: null, useDraft: true, cam: { scale: 1, x: 0, y: 0 } },
+                    keyframe: { id: 'keyframe', label: 'Key View', group: 'keyframe', color: 'var(--color-key)', span: 2, isPlaying: false, time: 0, anims: [], cameraEl: null, targetEl: null, phEl: document.getElementById('ph-key'), useDraft: true, cam: { scale: 1, x: 0, y: 0 } }
+                };
+
+                let viewGroupsOrder = ['playback', 'cursor', 'keyframe'];
+
+                let animData = {
+                    transform: [
+                        { id: 't1', time: 0, value: 'translateX(0px) translateY(0px) rotate(0deg) scale(1)', easing: 'ease-in-out' },
+                        { id: 't2', time: 1000, value: 'translateX(100px) translateY(50px) rotate(45deg) scale(1)', easing: 'ease' },
+                        { id: 't3', time: 3000, value: 'translateX(0px) translateY(0px) rotate(0deg) scale(1)', easing: 'linear' }
+                    ],
+                    filter: [
+                        { id: 'f1', time: 0, value: 'blur(0px) brightness(100%)', easing: 'linear' },
+                        { id: 'f3', time: 3000, value: 'blur(0px) brightness(100%)', easing: 'linear' }
+                    ]
+                };
+
+                // --- ÉTAT MULTI-BROUILLON (Multi-Drafts) ---
+                let selectedKfId = null;
+                let selectedProp = null;
+                let draftKfs = {}; // Dictionnaire de toutes les frames en cours de modification
+
+                function formatTime(ms) {
+                    const s = Math.floor(ms / 1000); let msRemain = Math.floor(ms % 1000);
+                    if (msRemain < 10) msRemain = '00' + msRemain; else if (msRemain < 100) msRemain = '0' + msRemain;
+                    return `00:0${s}:${msRemain}`;
+                }
+                function generateId() { return Math.random().toString(36).substr(2, 9); }
+
+                // --- FONCTION D'INTERPOLATION MATHÉMATIQUE ---
+                const smartParsers = {
+                    transform: {
+                        parse: (val) => ({ tx: val.match(/translateX\((.*?)\)/)?.[1] || '0px', ty: val.match(/translateY\((.*?)\)/)?.[1] || '0px', rot: val.match(/rotate\((.*?)\)/)?.[1] || '0deg', scale: val.match(/scale\((.*?)\)/)?.[1] || '1' }),
+                        build: (d) => `translateX(${d.tx}) translateY(${d.ty}) rotate(${d.rot}) scale(${d.scale})`,
+                        controls: [
+                            { key: 'tx', label: 'X Pos', min: -500, max: 500, step: 1, units: ['px', 'vw', '%', 'em', 'rem'] },
+                            { key: 'ty', label: 'Y Pos', min: -500, max: 500, step: 1, units: ['px', 'vh', '%', 'em', 'rem'] },
+                            { key: 'rot', label: 'Rotation', min: -360, max: 360, step: 1, units: ['deg', 'rad', 'turn'] },
+                            { key: 'scale', label: 'Scale', min: 0, max: 3, step: 0.1, units: [] }
+                        ]
+                    },
+                    filter: {
+                        parse: (val) => ({ blur: val.match(/blur\((.*?)\)/)?.[1] || '0px', brightness: val.match(/brightness\((.*?)\)/)?.[1] || '100%' }),
+                        build: (d) => `blur(${d.blur}) brightness(${d.brightness})`,
+                        controls: [{ key: 'blur', label: 'Flou', min: 0, max: 50, step: 1, units: ['px', 'em', 'rem'] }, { key: 'brightness', label: 'Luminosité', min: 0, max: 300, step: 1, units: ['%'] }]
+                    },
+                    opacity: {
+                        parse: (val) => ({ op: val || '1' }), build: (d) => `${d.op}`,
+                        controls: [{ key: 'op', label: 'Opacité', min: 0, max: 1, step: 0.05, units: [] }]
+                    },
+                    borderRadius: {
+                        parse: (val) => ({ br: val || '0px' }), build: (d) => `${d.br}`,
+                        controls: [{ key: 'br', label: 'Arrondi', min: 0, max: 100, step: 1, units: ['px', '%', 'em'] }]
+                    }
+                };
+
+                function getInterpolatedValue(propName, timeMs) {
+                    const track = animData[propName];
+                    if (!track || track.length === 0) return '';
+                    const sorted = [...track].sort((a, b) => a.time - b.time);
+                    const prevKf = sorted.slice().reverse().find(k => k.time <= timeMs);
+                    const nextKf = sorted.find(k => k.time > timeMs);
+                    if (!prevKf) return nextKf ? nextKf.value : '';
+                    if (!nextKf) return prevKf.value;
+                    if (prevKf.time === timeMs) return prevKf.value;
+
+                    if (smartParsers[propName]) {
+                        const parser = smartParsers[propName];
+                        const prevData = parser.parse(prevKf.value); const nextData = parser.parse(nextKf.value);
+                        const ratio = (timeMs - prevKf.time) / (nextKf.time - prevKf.time);
+                        const interpolatedData = {};
+                        for (const key in prevData) {
+                            const pMatch = String(prevData[key]).match(/^(-?[\d.]+)(.*)$/); const nMatch = String(nextData[key]).match(/^(-?[\d.]+)(.*)$/);
+                            if (pMatch && nMatch && pMatch[2] === nMatch[2]) {
+                                interpolatedData[key] = (Math.round((parseFloat(pMatch[1]) + (parseFloat(nMatch[1]) - parseFloat(pMatch[1])) * ratio) * 100) / 100) + pMatch[2];
+                            } else { interpolatedData[key] = prevData[key]; }
+                        }
+                        return parser.build(interpolatedData);
+                    }
+                    return prevKf.value;
+                }
+
+                // --- GESTION DOM DES VUES ---
+                function createViewPanelDOM(view) {
+                    const panel = document.createElement('div'); panel.className = 'dockable-panel'; panel.id = `view-panel-${view.id}`;
+                    const header = document.createElement('div'); header.className = 'view-header'; header.draggable = true; header.dataset.panelId = panel.id;
+
+                    // Nouveaux boutons d'actions globaux selon la vue
+                    let extraBtns = '';
+                    if (view.id === 'playback') {
+                        extraBtns = `<button class="btn-action btn-sync-all" title="Synchroniser toutes les caméras sur cette vue">🔗 Sync Toutes</button>`;
+                    } else if (view.id === 'cursorAfter') {
+                        extraBtns = `
+                        <button class="btn-action btn-apply-all" title="Valider tous les brouillons">💾 Valider Tout</button>
+                        <button class="btn-action btn-sync" data-view="${view.id}" title="Sync Camera">🔗 Sync</button>
+                    `;
+                    } else {
+                        extraBtns = `<button class="btn-action btn-sync" data-view="${view.id}" title="Sync Camera">🔗 Sync</button>`;
+                    }
+
+                    header.innerHTML = `
+                    <div class="view-title-group"><div class="view-dot" style="background-color: ${view.color}"></div> ${view.label}</div>
+                    <div class="camera-controls">
+                        <div class="zoom-level" id="zoom-display-${view.id}">100%</div>
+                        ${extraBtns}
+                    </div>`;
+
+                    const canvas = document.createElement('div'); canvas.className = 'view-canvas';
+                    const camera = document.createElement('div'); camera.className = 'camera-container'; view.cameraEl = camera;
+                    const target = document.createElement('div'); target.className = 'anim-target'; target.innerText = 'BOX'; view.targetEl = target;
+
+                    camera.appendChild(target); canvas.appendChild(camera); panel.appendChild(header); panel.appendChild(canvas);
+
+                    // Caméra Events
+                    const syncBtn = header.querySelector('.btn-sync');
+                    if (syncBtn) {
+                        syncBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            view.cam.scale = viewsConfig.playback.cam.scale; view.cam.x = viewsConfig.playback.cam.x; view.cam.y = viewsConfig.playback.cam.y;
+                            updateCameraTransform(view.id);
+                        });
+                    }
+
+                    const syncAllBtn = header.querySelector('.btn-sync-all');
+                    if (syncAllBtn) {
+                        syncAllBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const masterCam = viewsConfig.playback.cam;
+                            Object.entries(viewsConfig).forEach(([k, v]) => {
+                                if (k !== 'playback') {
+                                    v.cam.scale = masterCam.scale; v.cam.x = masterCam.x; v.cam.y = masterCam.y;
+                                    updateCameraTransform(k);
+                                }
+                            });
+                        });
+                    }
+
+                    const applyAllBtn = header.querySelector('.btn-apply-all');
+                    if (applyAllBtn) {
+                        applyAllBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            // Applique tous les drafts dans l'animData originale
+                            Object.values(draftKfs).forEach(draft => {
+                                const original = animData[draft.prop].find(k => k.id === draft.id);
+                                if (original) { original.value = draft.value; original.easing = draft.easing; }
+                            });
+                            draftKfs = {}; // Reset complet
+                            notifyDraftStatus(); updateInspectorUI(); renderKeyframes();
+                        });
+                    }
+
+                    canvas.addEventListener('wheel', (e) => {
+                        e.preventDefault(); const zoomSpeed = 0.1;
+                        if (e.deltaY < 0) view.cam.scale = Math.min(5, view.cam.scale + zoomSpeed); else view.cam.scale = Math.max(0.1, view.cam.scale - zoomSpeed);
+                        updateCameraTransform(view.id);
+                    });
+
+                    let isPanning = false; let startX, startY, startCamX, startCamY;
+                    canvas.addEventListener('mousedown', (e) => {
+                        if (e.button === 1 || (e.button === 0 && e.altKey)) {
+                            isPanning = true; startX = e.clientX; startY = e.clientY; startCamX = view.cam.x; startCamY = view.cam.y; canvas.style.cursor = 'grabbing';
+                        }
+                    });
+                    document.addEventListener('mousemove', (e) => {
+                        if (isPanning) { view.cam.x = startCamX + (e.clientX - startX); view.cam.y = startCamY + (e.clientY - startY); updateCameraTransform(view.id); }
+                    });
+                    document.addEventListener('mouseup', () => { isPanning = false; canvas.style.cursor = 'default'; });
+
+                    return panel;
+                }
+
+                function updateCameraTransform(viewKey) {
+                    const view = viewsConfig[viewKey];
+                    if (view.cameraEl) view.cameraEl.style.transform = `translate(${view.cam.x}px, ${view.cam.y}px) scale(${view.cam.scale})`;
+                    const zoomDisplay = document.getElementById(`zoom-display-${viewKey}`);
+                    if (zoomDisplay) zoomDisplay.innerText = `${Math.round(view.cam.scale * 100)}%`;
+                }
+
+                function initViewsDOM() {
+                    rootSplit.innerHTML = '';
+                    rootSplit.appendChild(createViewPanelDOM(viewsConfig.playback));
+                    rootSplit.appendChild(createViewPanelDOM(viewsConfig.cursorBefore));
+                    rootSplit.appendChild(createViewPanelDOM(viewsConfig.cursorAfter));
+                    keyViewWrapper.appendChild(createViewPanelDOM(viewsConfig.keyframe));
+                }
+
+                // --- MINI DOCKING ENGINE ---
+                let draggedPanelId = null; let currentDropZone = null; let currentTargetPanel = null;
+
+                document.addEventListener('dragstart', (e) => {
+                    if (e.target.classList.contains('view-header')) {
+                        draggedPanelId = e.target.dataset.panelId; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setDragImage(e.target.parentElement, 20, 20);
+                    }
+                });
+
+                document.addEventListener('dragover', (e) => {
+                    if (!draggedPanelId) return;
+                    e.preventDefault();
+                    const targetPanel = e.target.closest('.dockable-panel');
+                    if (!targetPanel || targetPanel.id === draggedPanelId) { dropIndicator.style.display = 'none'; currentTargetPanel = null; return; }
+
+                    currentTargetPanel = targetPanel; const rect = targetPanel.getBoundingClientRect();
+                    const x = e.clientX - rect.left; const y = e.clientY - rect.top; const w = rect.width; const h = rect.height;
+
+                    let zone = null;
+                    if (y < h / 4) zone = 'top'; else if (y > h * 0.75) zone = 'bottom'; else if (x < w / 4) zone = 'left'; else if (x > w * 0.75) zone = 'right';
+                    currentDropZone = zone;
+
+                    if (zone) {
+                        dropIndicator.style.display = 'block';
+                        dropIndicator.style.top = `${rect.top + (zone === 'bottom' ? h / 2 : 0)}px`; dropIndicator.style.left = `${rect.left + (zone === 'right' ? w / 2 : 0)}px`;
+                        dropIndicator.style.width = `${zone === 'left' || zone === 'right' ? w / 2 : w}px`; dropIndicator.style.height = `${zone === 'top' || zone === 'bottom' ? h / 2 : h}px`;
+                    } else { dropIndicator.style.display = 'none'; }
+                });
+
+                document.addEventListener('drop', (e) => {
+                    if (!draggedPanelId || !currentTargetPanel || !currentDropZone) return;
+                    e.preventDefault();
+                    const draggedEl = document.getElementById(draggedPanelId); if (!draggedEl) return;
+                    const oldParent = draggedEl.parentElement;
+
+                    const isHorizontalSplit = currentDropZone === 'left' || currentDropZone === 'right';
+                    const isFirst = currentDropZone === 'left' || currentDropZone === 'top';
+
+                    const newSplit = document.createElement('div'); newSplit.className = isHorizontalSplit ? 'split-row' : 'split-col';
+                    currentTargetPanel.replaceWith(newSplit);
+
+                    if (isFirst) { newSplit.appendChild(draggedEl); newSplit.appendChild(currentTargetPanel); }
+                    else { newSplit.appendChild(currentTargetPanel); newSplit.appendChild(draggedEl); }
+
+                    if (oldParent && oldParent.id !== 'top-section' && oldParent.id !== 'key-view-wrapper' && oldParent.children.length === 0) oldParent.remove();
+                    dropIndicator.style.display = 'none'; draggedPanelId = null;
+                });
+
+                document.addEventListener('dragend', () => { dropIndicator.style.display = 'none'; draggedPanelId = null; });
+
+                // --- GESTION TIMELINE ---
+                function renderTracksStructure() {
+                    labelsContainer.innerHTML = ''; tracksContainer.innerHTML = '';
+                    Object.keys(animData).forEach(propName => {
+                        const labelDiv = document.createElement('div'); labelDiv.className = 'track-label';
+                        labelDiv.innerHTML = `<span>${propName}</span><button class="btn-del-track" data-prop="${propName}">×</button>`;
+                        labelsContainer.appendChild(labelDiv);
+                        labelDiv.querySelector('.btn-del-track').addEventListener('click', () => {
+                            delete animData[propName]; if (selectedProp === propName) selectKeyframe(null, null);
+                            // Nettoie aussi les brouillons potentiels de cette piste
+                            Object.keys(draftKfs).forEach(id => { if (draftKfs[id].prop === propName) delete draftKfs[id]; });
+                            notifyDraftStatus(); renderTracksStructure(); compileAllViews();
+                        });
+
+                        const trackDiv = document.createElement('div'); trackDiv.className = 'track';
+                        trackDiv.dataset.prop = propName; trackDiv.style.width = `${TIMELINE_WIDTH}px`;
+                        trackDiv.addEventListener('dblclick', (e) => {
+                            const rect = trackDiv.getBoundingClientRect();
+                            const timeMs = Math.max(0, Math.min(Math.round(((e.clientX - rect.left) / TIMELINE_WIDTH) * TOTAL_DURATION), TOTAL_DURATION));
+                            const interpolatedVal = getInterpolatedValue(propName, timeMs);
+                            const prevKf = animData[propName].slice().reverse().find(k => k.time <= timeMs);
+                            const newKf = { id: generateId(), time: timeMs, value: interpolatedVal, easing: prevKf ? prevKf.easing : 'ease' };
+
+                            animData[propName].push(newKf); animData[propName].sort((a, b) => a.time - b.time);
+                            compileAllViews(); renderKeyframes(); selectKeyframe(newKf.id, propName);
+                        });
+                        tracksContainer.appendChild(trackDiv);
+                    });
+                    const totalHeight = Math.max(300, Object.keys(animData).length * 30);
+                    Object.values(viewsConfig).forEach(v => { if (v.phEl) v.phEl.style.height = `${totalHeight}px`; });
+                    dragGuide.style.height = `${totalHeight}px`; renderKeyframes();
+                }
+
+                newTrackInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        const prop = newTrackInput.value.trim();
+                        if (prop && !animData[prop]) {
+                            const jsProp = prop.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            animData[jsProp] = []; newTrackInput.value = ''; renderTracksStructure(); compileAllViews();
+                        }
+                    }
+                });
+
+                function renderKeyframes() {
+                    Object.entries(animData).forEach(([propName, keyframes]) => {
+                        const trackEl = document.querySelector(`.track[data-prop="${propName}"]`);
+                        if (!trackEl) return; trackEl.innerHTML = '';
+                        keyframes.forEach(kf => {
+                            const el = document.createElement('div'); el.className = 'keyframe';
+                            if (kf.id === selectedKfId) el.classList.add('selected');
+                            if (draftKfs[kf.id]) el.classList.add('drafted'); // Marqueur visuel pour les brouillons
+
+                            el.style.left = `${(kf.time / TOTAL_DURATION) * TIMELINE_WIDTH}px`;
+                            el.addEventListener('mousedown', (e) => { e.stopPropagation(); startDraggingKeyframe(kf, propName, el); });
+                            el.addEventListener('contextmenu', (e) => {
+                                e.preventDefault(); e.stopPropagation();
+                                animData[propName] = animData[propName].filter(k => k.id !== kf.id);
+                                if (draftKfs[kf.id]) delete draftKfs[kf.id];
+                                if (selectedKfId === kf.id) selectKeyframe(null, null);
+                                notifyDraftStatus(); compileAllViews(); renderKeyframes();
+                            });
+                            trackEl.appendChild(el);
+                        });
+                    });
+                }
+
+                let draggingKfData = null, draggingEl = null;
+                function startDraggingKeyframe(kfData, propName, el) {
+                    draggingKfData = { data: kfData, prop: propName }; draggingEl = el;
+                    selectKeyframe(kfData.id, propName);
+                    draggingEl.style.opacity = '0.4'; dragGuide.style.display = 'block';
+                    dragGuide.style.left = `${(kfData.time / TOTAL_DURATION) * TIMELINE_WIDTH}px`;
+                }
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!draggingKfData) return;
+                    const timelineRect = timelineScroll.getBoundingClientRect();
+                    let newX = Math.max(0, Math.min(e.clientX - timelineRect.left + timelineScroll.scrollLeft, TIMELINE_WIDTH));
+                    draggingEl.style.left = `${newX}px`; dragGuide.style.left = `${newX}px`;
+                    const newTime = Math.round((newX / TIMELINE_WIDTH) * TOTAL_DURATION);
+
+                    draggingKfData.data.time = newTime;
+                    if (draftKfs[draggingKfData.data.id]) draftKfs[draggingKfData.data.id].time = newTime; // Synchro Draft
+
+                    updateViewTime('keyframe', newTime); updateViewTime('cursorBefore', newTime); updateViewTime('cursorAfter', newTime);
+                    const timeEl = document.getElementById('insp-time'); if (timeEl) timeEl.innerText = newTime;
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (draggingKfData) {
+                        draggingEl.style.opacity = '1'; dragGuide.style.display = 'none';
+                        animData[draggingKfData.prop].sort((a, b) => a.time - b.time);
+                        compileAllViews(); renderKeyframes();
+                        draggingKfData = null; draggingEl = null;
+                    }
+                });
+
+                // --- MOTEUR WAAPI & DRAFTS ---
+                function getDraftAnimData() {
+                    if (Object.keys(draftKfs).length === 0) return animData;
+                    const draftData = {};
+                    for (const prop in animData) {
+                        draftData[prop] = animData[prop].map(k => draftKfs[k.id] ? draftKfs[k.id] : k);
+                    }
+                    return draftData;
+                }
+
+                function compileAllViews() {
+                    const standardData = animData;
+                    const draftData = getDraftAnimData();
+                    Object.values(viewsConfig).forEach(view => {
+                        view.anims.forEach(anim => anim.cancel()); view.anims = [];
+                        const dataToUse = view.useDraft ? draftData : standardData;
+                        Object.entries(dataToUse).forEach(([prop, keyframes]) => {
+                            if (keyframes.length === 0) return;
+                            const waapiFrames = keyframes.map(kf => ({ offset: kf.time / TOTAL_DURATION, [prop]: kf.value, easing: kf.easing || 'linear' }));
+                            try {
+                                const anim = view.targetEl.animate(waapiFrames, { duration: TOTAL_DURATION, fill: 'both' });
+                                anim.currentTime = view.time; if (!view.isPlaying) anim.pause(); view.anims.push(anim);
+                            } catch (err) { }
+                        });
+                    });
+                }
+
+                function updateViewTime(viewKey, timeMs) {
+                    const view = viewsConfig[viewKey]; timeMs = Math.max(0, Math.min(timeMs, TOTAL_DURATION)); view.time = timeMs;
+                    view.anims.forEach(anim => anim.currentTime = timeMs);
+                    if (view.phEl) { view.phEl.style.display = 'block'; view.phEl.style.left = `${(timeMs / TOTAL_DURATION) * TIMELINE_WIDTH}px`; }
+                    if (viewKey === 'playback') timeDisplay.innerText = formatTime(timeMs);
+                }
+
+                // Gère l'affichage dynamique des boutons de validation
+                function notifyDraftStatus() {
+                    // Pour l'inspecteur
+                    if (selectedKfId && draftKfs[selectedKfId]) {
+                        inspectorActions.style.display = 'flex';
+                    } else {
+                        inspectorActions.style.display = 'none';
+                    }
+
+                    // Pour le bouton Global
+                    const btnApplyAll = document.querySelector('.btn-apply-all');
+                    if (btnApplyAll) {
+                        btnApplyAll.style.display = Object.keys(draftKfs).length > 0 ? 'inline-block' : 'none';
+                    }
+
+                    renderKeyframes(); // Pour mettre à jour les marqueurs visuels des drafts
+                    compileAllViews();
+                }
+
+                document.getElementById('btn-apply').addEventListener('click', () => {
+                    if (!selectedKfId || !draftKfs[selectedKfId]) return;
+                    const draft = draftKfs[selectedKfId];
+                    const originalKf = animData[draft.prop].find(k => k.id === draft.id);
+                    if (originalKf) { originalKf.value = draft.value; originalKf.easing = draft.easing; }
+
+                    delete draftKfs[selectedKfId]; // Retire du brouillon
+                    notifyDraftStatus(); updateInspectorUI();
+                });
+
+                document.getElementById('btn-cancel').addEventListener('click', () => {
+                    if (!selectedKfId || !draftKfs[selectedKfId]) return;
+                    delete draftKfs[selectedKfId];
+                    notifyDraftStatus(); updateInspectorUI();
+                });
+
+                // Gère l'initialisation du brouillon à la volée
+                function getOrCreateActiveDraft() {
+                    if (!draftKfs[selectedKfId]) {
+                        const orig = animData[selectedProp].find(k => k.id === selectedKfId);
+                        draftKfs[selectedKfId] = { ...orig, prop: selectedProp };
+                    }
+                    return draftKfs[selectedKfId];
+                }
+
+                // --- SMART INSPECTOR UI ---
+                function selectKeyframe(kfId, propName) {
+                    selectedKfId = kfId; selectedProp = propName;
+
+                    if (selectedKfId) {
+                        keyViewWrapper.style.display = 'flex';
+                        // Synchronise la Key View avec le temps de cette keyframe (draft ou originale)
+                        const activeData = draftKfs[selectedKfId] || animData[selectedProp].find(k => k.id === selectedKfId);
+                        updateViewTime('keyframe', activeData.time);
+                    } else {
+                        keyViewWrapper.style.display = 'none';
+                    }
+
+                    notifyDraftStatus(); updateInspectorUI();
+                }
+
+                function renderSmartControls(parsedData, controls) {
+                    return controls.map(ctrl => {
+                        const rawVal = parsedData[ctrl.key] || '0';
+                        const match = rawVal.match(/^(-?[\d.]+)(.*)$/);
+                        const numVal = match ? parseFloat(match[1]) : 0;
+                        const currentUnit = match ? match[2] : (ctrl.units[0] || '');
+                        let unitSelectHtml = '';
+                        if (ctrl.units.length > 0) {
+                            const options = ctrl.units.map(u => `<option value="${u}" ${u === currentUnit ? 'selected' : ''}>${u || '-'}</option>`).join('');
+                            unitSelectHtml = `<select class="unit-select" data-key="${ctrl.key}">${options}</select>`;
+                        }
+                        return `
+                        <div class="smart-item">
+                            <label>${ctrl.label}</label>
+                            <div class="slider-group">
+                                <div class="val-display" data-key="${ctrl.key}" title="Double-clic pour éditer">${numVal}</div>
+                                ${unitSelectHtml}
+                                <input type="range" class="val-slider" data-key="${ctrl.key}" min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${numVal}">
+                            </div>
+                        </div>
+                    `;
+                    }).join('');
+                }
+
+                function updateInspectorUI() {
+                    // Détermine les données à afficher (brouillon en cours ou original)
+                    const activeData = selectedKfId ? (draftKfs[selectedKfId] || animData[selectedProp].find(k => k.id === selectedKfId)) : null;
+
+                    if (!activeData) { kfDetails.innerHTML = '<p style="color:#888; font-style:italic; padding-bottom:15px; border-bottom:1px dashed var(--border-color);">Sélectionnez une keyframe.</p>'; return; }
+
+                    let html = `<div class="input-group"><label>Propriété</label><div style="color:var(--accent); font-weight:bold; font-size:14px;">${selectedProp}</div></div><div class="input-group"><label>Temps (ms)</label><div id="insp-time" style="color:#fff; font-size:14px;">${activeData.time}</div></div>`;
+
+                    if (smartParsers[selectedProp]) {
+                        const parser = smartParsers[selectedProp];
+                        html += `<div class="input-group"><label>Valeurs</label><div class="smart-grid" id="smart-inputs">${renderSmartControls(parser.parse(activeData.value), parser.controls)}</div></div>`;
+                    } else {
+                        html += `<div class="input-group"><label>Valeur brute</label><input type="text" class="raw-input" id="kf-val-input" value="${activeData.value}"></div>`;
+                    }
+
+                    html += `<div class="input-group"><label>Easing</label><select id="kf-easing-input"><option value="linear" ${activeData.easing === 'linear' ? 'selected' : ''}>Linear</option><option value="ease" ${activeData.easing === 'ease' ? 'selected' : ''}>Ease</option><option value="ease-in-out" ${activeData.easing === 'ease-in-out' ? 'selected' : ''}>Ease In Out</option></select></div>`;
+                    kfDetails.innerHTML = html;
+
+                    // Écouteurs dynamiques (création de brouillon à la volée)
+                    if (smartParsers[selectedProp]) {
+                        const parser = smartParsers[selectedProp];
+                        const sliders = document.querySelectorAll('#smart-inputs .val-slider');
+                        const displays = document.querySelectorAll('#smart-inputs .val-display');
+                        const unitSelects = document.querySelectorAll('#smart-inputs .unit-select');
+
+                        const buildAndNotify = () => {
+                            const newData = {};
+                            displays.forEach(disp => {
+                                const key = disp.dataset.key; const select = document.querySelector(`.unit-select[data-key="${key}"]`);
+                                newData[key] = disp.innerText + (select ? select.value : '');
+                            });
+                            const draft = getOrCreateActiveDraft();
+                            draft.value = parser.build(newData);
+                            notifyDraftStatus();
+                        };
+
+                        sliders.forEach(slider => { slider.addEventListener('input', (e) => { document.querySelector(`.val-display[data-key="${e.target.dataset.key}"]`).innerText = e.target.value; buildAndNotify(); }); });
+                        unitSelects.forEach(select => { select.addEventListener('change', buildAndNotify); });
+                        displays.forEach(display => {
+                            display.addEventListener('dblclick', () => {
+                                const currentVal = display.innerText; display.innerHTML = `<input type="text" class="inline-edit" value="${currentVal}">`;
+                                const input = display.querySelector('.inline-edit'); input.focus(); input.select();
+                                const saveInline = () => {
+                                    let newVal = parseFloat(input.value); if (isNaN(newVal)) newVal = parseFloat(currentVal);
+                                    display.innerText = newVal;
+                                    const slider = document.querySelector(`.val-slider[data-key="${display.dataset.key}"]`); if (slider) slider.value = newVal;
+                                    buildAndNotify();
+                                };
+                                input.addEventListener('blur', saveInline);
+                                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveInline(); if (e.key === 'Escape') display.innerText = currentVal; });
+                            });
+                        });
+                    } else {
+                        document.getElementById('kf-val-input').addEventListener('input', (e) => {
+                            const draft = getOrCreateActiveDraft(); draft.value = e.target.value; notifyDraftStatus();
+                        });
+                    }
+                    document.getElementById('kf-easing-input').addEventListener('change', (e) => {
+                        const draft = getOrCreateActiveDraft(); draft.easing = e.target.value; notifyDraftStatus();
+                    });
+                }
+
+                // --- LECTURE ---
+                function playLoop() {
+                    const pbView = viewsConfig.playback;
+                    if (pbView.isPlaying && pbView.anims.length > 0) {
+                        let newTime = pbView.anims[0].currentTime;
+                        if (newTime >= TOTAL_DURATION) { newTime = 0; pbView.anims.forEach(anim => anim.currentTime = 0); }
+                        updateViewTime('playback', newTime);
+                    }
+                    requestAnimationFrame(playLoop);
+                }
+                requestAnimationFrame(playLoop);
+
+                let isDraggingPlayback = false;
+                scrubZone.addEventListener('mousedown', (e) => {
+                    isDraggingPlayback = true; viewsConfig.playback.isPlaying = false; viewsConfig.playback.anims.forEach(anim => anim.pause());
+                    updateViewTime('playback', ((e.clientX - scrubZone.getBoundingClientRect().left + timelineScroll.scrollLeft) / TIMELINE_WIDTH) * TOTAL_DURATION);
+                });
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDraggingPlayback) return;
+                    updateViewTime('playback', ((e.clientX - timelineScroll.getBoundingClientRect().left + timelineScroll.scrollLeft) / TIMELINE_WIDTH) * TOTAL_DURATION);
+                });
+                document.addEventListener('mouseup', () => { isDraggingPlayback = false; });
+
+                timelineScroll.addEventListener('mousemove', (e) => {
+                    if (isDraggingPlayback || draggingKfData) return;
+                    const mouseTime = ((e.clientX - timelineScroll.getBoundingClientRect().left + timelineScroll.scrollLeft) / TIMELINE_WIDTH) * TOTAL_DURATION;
+                    updateViewTime('cursorBefore', mouseTime); updateViewTime('cursorAfter', mouseTime);
+                });
+
+                document.getElementById('btn-play').addEventListener('click', () => {
+                    const pbView = viewsConfig.playback;
+                    if (pbView.isPlaying) { pbView.isPlaying = false; pbView.anims.forEach(anim => anim.pause()); }
+                    else { pbView.isPlaying = true; pbView.anims.forEach(anim => anim.play()); }
+                });
+                document.getElementById('btn-stop').addEventListener('click', () => {
+                    viewsConfig.playback.isPlaying = false; viewsConfig.playback.anims.forEach(anim => anim.pause()); updateViewTime('playback', 0);
+                });
+
+                initViewsDOM(); renderTracksStructure(); compileAllViews();
+            });
+        </script>
+    </body>
+
+</html>

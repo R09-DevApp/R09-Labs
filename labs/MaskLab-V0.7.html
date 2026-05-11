@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mask Lab</title>
+    <style>
+        /** * 🏗️ LABORATOIRE WEB-MASK
+         * ==========================================================================
+         * Zéro triche : Tout le rendu est 100% CSS. Le JS ne fera que piloter
+         * les variables définies dans `.interactive-stage`.
+         * ==========================================================================
+         */
+
+        :root {
+            --bg-color: #1e1e1e;
+            --panel-bg: #2b2b2b;
+            --text-main: #d4d4d4;
+            --accent: #27c93f;
+            --border-color: #444;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* =========================================================
+           1. ZONE PRINCIPALE (Explications & Démo)
+        ========================================================= */
+        main {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        header h1 { margin: 0 0 10px 0; color: white; }
+        header p { margin: 0; color: #aaa; line-height: 1.5; max-width: 800px; }
+
+
+        .checkerboard {
+            background-color: #333;
+            background-image:
+                linear-gradient(45deg, #222 25%, transparent 25%),
+                linear-gradient(-45deg, #222 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #222 75%),
+                linear-gradient(-45deg, transparent 75%, #222 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+
+        .interactive-stage {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+
+            background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop') center/cover;
+            border-radius: 16px;
+
+
+            --m-image: radial-gradient(circle at center, black 30%, transparent 70%);
+            --m-size: 100% 100%;
+            --m-pos: center;
+            --m-rep: no-repeat;
+
+
+            -webkit-mask-image: var(--m-image);
+            -webkit-mask-size: var(--m-size);
+            -webkit-mask-position: var(--m-pos);
+            -webkit-mask-repeat: var(--m-rep);
+
+            mask-image: var(--m-image);
+            mask-size: var(--m-size);
+            mask-position: var(--m-pos);
+            mask-repeat: var(--m-rep);
+
+
+            transition: -webkit-mask-size 0.3s ease, mask-size 0.3s ease;
+        }
+
+        /* =========================================================
+           2. EXEMPLES STATIQUES (La preuve de l'exhaustivité native)
+        ========================================================= */
+        .static-examples {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .static-card {
+            flex: 1;
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .static-card h3 { font-size: 0.9rem; margin-top: 0; color: #fff; }
+
+        .static-demo {
+            width: 100%; height: 120px;
+            background: linear-gradient(45deg, #ff5f56, #ffbd2e);
+            border-radius: 8px;
+        }
+
+
+        .mask-linear {
+            -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+        }
+
+
+        .mask-svg {
+
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E");
+            -webkit-mask-size: contain;
+            -webkit-mask-position: center;
+            -webkit-mask-repeat: no-repeat;
+
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E");
+            mask-size: contain;
+            mask-position: center;
+            mask-repeat: no-repeat;
+        }
+
+
+        .mask-stripes {
+            -webkit-mask-image: repeating-linear-gradient(45deg, black, black 10px, transparent 10px, transparent 20px);
+            mask-image: repeating-linear-gradient(45deg, black, black 10px, transparent 10px, transparent 20px);
+        }
+
+
+        /* =========================================================
+           3. SIDE PANEL (Panneau de contrôle)
+        ========================================================= */
+        aside {
+            width: 320px;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            overflow-y: auto;
+        }
+
+        aside h2 { margin-top: 0; color: white; font-size: 1.2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;}
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label { font-size: 0.85rem; font-weight: bold; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: white;
+            font-family: monospace;
+            cursor: pointer;
+        }
+
+        select:focus { outline: 2px solid var(--accent); }
+
+        .range-wrapper {
+            display: flex; gap: 10px; align-items: center;
+        }
+        .range-wrapper select { width: 80px; }
+
+        .hint { font-size: 0.75rem; color: #888; font-style: italic; }
+
+    </style>
+</head>
+<body>
+
+    <main>
+        <header>
+            <h1>Laboratoire CSS Mask</h1>
+            <p>Le masque détermine quelles parties d'un élément doivent être visibles. C'est l'équivalent d'un masque de fusion sur Photoshop. La transparence (alpha) de l'image de masque sculpte l'élément cible.</p>
+        </header>
+
+        <section class="checkerboard">
+            <div class="interactive-stage" id="target-element"></div>
+        </section>
+
+        <section class="static-examples">
+            <div class="static-card">
+                <h3>Fondu Linéaire</h3>
+                <div class="static-demo mask-linear"></div>
+            </div>
+            <div class="static-card">
+                <h3>Forme SVG</h3>
+                <div class="static-demo mask-svg"></div>
+            </div>
+            <div class="static-card">
+                <h3>Stores (Repeating)</h3>
+                <div class="static-demo mask-stripes"></div>
+            </div>
+        </section>
+    </main>
+
+    <aside>
+        <h2>Console de Réglages</h2>
+
+        <div class="control-group">
+            <label for="ctrl-image">1. mask-image</label>
+            <select id="ctrl-image">
+                <option value="radial-gradient(circle at center, black 30%, transparent 70%)">Radial Gradient (Spotlight)</option>
+                <option value="linear-gradient(to right, black 20%, transparent 80%)">Linear Gradient (Fade)</option>
+                <option value="repeating-radial-gradient(circle, black, black 10px, transparent 10px, transparent 20px)">Repeating Radial (Rings)</option>
+                <option value="url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E&quot;)">Forme SVG (Étoile)</option>
+            </select>
+            <span class="hint">Définit la texture de découpe.</span>
+        </div>
+
+        <div class="control-group">
+            <label for="ctrl-size">2. mask-size</label>
+            <div class="range-wrapper">
+                <input type="range" id="ctrl-size" min="10" max="200" value="100">
+                <select id="ctrl-unit">
+                    <option value="%">%</option>
+                    <option value="px">px</option>
+                </select>
+            </div>
+            <span class="hint">Modifie l'échelle du masque. Baissez à 30% pour tester la répétition.</span>
+        </div>
+
+        <div class="control-group">
+            <label for="ctrl-repeat">3. mask-repeat</label>
+            <select id="ctrl-repeat">
+                <option value="no-repeat">no-repeat</option>
+                <option value="repeat">repeat (Mosaïque)</option>
+                <option value="space">space</option>
+                <option value="round">round</option>
+            </select>
+            <span class="hint">Comportement si le masque est plus petit que l'image.</span>
+        </div>
+
+        <div class="control-group">
+            <label for="ctrl-position">4. mask-position</label>
+            <select id="ctrl-position">
+                <option value="center">center</option>
+                <option value="top left">top left</option>
+                <option value="bottom right">bottom right</option>
+                <option value="center bottom">center bottom</option>
+            </select>
+            <span class="hint">Ancrage du masque.</span>
+        </div>
+    </aside>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const target = document.getElementById('target-element');
+
+            const ctrlImage = document.getElementById('ctrl-image');
+            const ctrlSize = document.getElementById('ctrl-size');
+            const ctrlUnit = document.getElementById('ctrl-unit');
+            const ctrlRepeat = document.getElementById('ctrl-repeat');
+            const ctrlPosition = document.getElementById('ctrl-position');
+
+            const updateMask = () => {
+                target.style.setProperty('--m-image', ctrlImage.value);
+
+                const sizeValue = `${ctrlSize.value}${ctrlUnit.value}`;
+                target.style.setProperty('--m-size', `${sizeValue} ${sizeValue}`);
+
+                target.style.setProperty('--m-rep', ctrlRepeat.value);
+                target.style.setProperty('--m-pos', ctrlPosition.value);
+            };
+            [ctrlImage, ctrlSize, ctrlUnit, ctrlRepeat, ctrlPosition].forEach(el => {
+                el.addEventListener('input', updateMask);
+            });
+
+            updateMask();
+        });
+    </script>
+</body>
+</html>

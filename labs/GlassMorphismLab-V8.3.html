@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Glassmorphisme</title>
+		<style>
+			/* ==========================================================================
+           🧪 VARIABLES DE BASE (Le cœur du système, fonctionne SANS JavaScript)
+        ========================================================================== */
+			:root {
+
+				--bg-mode: 2;
+
+				--light-speed: 8s;
+				--light-bright: 0.8;
+				--light-color: #00ffff;
+
+				--lines-thick: 10px;
+				--lines-color: rgba(255, 255, 255, 0.1);
+				--lines-angle: 45deg;
+
+
+				--card-w: 320px;
+				--card-h: 450px;
+				--card-x: 50vw;
+				--card-y: 50vh;
+				--card-z: 20px;
+				--card-rot: 0deg;
+				--card-rx: 10deg;
+				--card-ry: -1deg;
+				--card-thick: 01px;
+
+
+				--glass-smooth: 0;
+
+				--glass-blur:0px;
+				--glass-sat: 1.5;
+
+
+				--bevel-width: 55px;
+				--bevel-smooth: 0;
+				--bevel-blur: 0px;
+
+
+				--bevel-shadow-1: rgba(255, 255, 255, 0.5);
+				--bevel-shadow-2: rgba(0, 0, 0, 0.3);
+			}
+
+			/* ==========================================================================
+           🏗️ STRUCTURE GLOBALE
+        ========================================================================== */
+			* {
+				box-sizing: border-box;
+			}
+
+			body,
+			html {
+				margin: 0;
+				padding: 0;
+				width: 100vw;
+				height: 100vh;
+				background: #111;
+				overflow: hidden;
+				font-family: system-ui, sans-serif;
+				display: flex;
+			}
+
+			/* ==========================================================================
+           🎛️ PANNEAU DE CONTRÔLE (Ultra-compact, sans scroll)
+        ========================================================================== */
+			#panel {
+				width: 20vw;
+				max-width: 350px;
+				min-width: 260px;
+				height: 100vh;
+				background: #1e1e1e;
+				color: #ddd;
+				padding: 10px 15px;
+				border-right: 1px solid #333;
+				z-index: 100;
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+				font-size: 11px;
+			}
+
+			#panel h1 {
+				font-size: 14px;
+				color: #fff;
+				margin: 0 0 5px 0;
+				text-align: center;
+			}
+
+			#panel h2 {
+				font-size: 12px;
+				color: #00ffff;
+				margin: 5px 0 2px 0;
+				border-bottom: 1px solid #333;
+				padding-bottom: 2px;
+			}
+
+			.ctrl-row {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.ctrl-row label {
+				flex: 1;
+			}
+
+			.ctrl-row input,
+			.ctrl-row select {
+				width: 55%;
+				height: 12px;
+				font-size: 10px;
+				background: #333;
+				color: #fff;
+				border: 1px solid #555;
+			}
+
+			input[type="range"] {
+				accent-color: #00ffff;
+			}
+
+			/* ==========================================================================
+           🌌 LA SCÈNE ET LES FONDS
+        ========================================================================== */
+			#scene {
+				flex: 1;
+				position: relative;
+				overflow: hidden;
+				background: #000;
+
+				perspective: 1200px;
+			}
+
+			.bg-layer {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+				transition: opacity 0.5s;
+				opacity: 0;
+			}
+
+
+			#bg-spots {
+				background: #050505;
+			}
+
+			.spot {
+				position: absolute;
+				border-radius: 50%;
+				filter: blur(50px);
+				background: var(--light-color);
+				opacity: var(--light-bright);
+				animation: float var(--light-speed) infinite ease-in-out alternate;
+			}
+
+			.spot-1 {
+				width: 200px;
+				height: 200px;
+				bottom: -50px;
+				left: 20%;
+			}
+
+			.spot-2 {
+				width: 300px;
+				height: 300px;
+				bottom: -100px;
+				right: 10%;
+				animation-delay: -2s;
+			}
+
+			@keyframes float {
+				0% {
+					transform: translateY(0) scale(1);
+				}
+
+				100% {
+					transform: translateY(-300px) scale(1.5);
+				}
+			}
+
+
+			#bg-photo {
+				background-image: url('https://www.papierpeintpanoramique.ch/media/catalog/product/cache/5b18b93ddbe5d6592c6b175f41d24454/a/d/adobestock_277637491-small.jpg');
+				background-size: cover;
+				background-position: center;
+			}
+
+
+			#bg-lines {
+				background: repeating-linear-gradient(var(--lines-angle),
+						#111 0, #111 var(--lines-thick),
+						var(--lines-color) var(--lines-thick), var(--lines-color) calc(var(--lines-thick) * 2));
+			}
+
+
+			body.show-bg-1 #bg-spots {
+				opacity: 1;
+			}
+
+			body.show-bg-2 #bg-photo {
+				opacity: 1;
+			}
+
+			body.show-bg-3 #bg-lines {
+				opacity: 1;
+			}
+
+			/* Lumière Frontale (Au-dessus de la carte)
+			#top-light {
+				position: absolute;
+				width: 600px;
+				height: 600px;
+				background: radial-gradient(circle, var(--light-color) 0%, transparent 60%);
+				border-radius: 50%;
+				pointer-events: none;
+				mix-blend-mode: overlay;
+				z-index: 50;
+				opacity: var(--light-bright);
+				transform: translate(-50%, -50%);
+				animation: moveLight var(--light-speed) infinite alternate ease-in-out;
+			}
+			@keyframes moveLight {
+				0% { left: 10%; top: 20%; }
+				25% { left: 80%; top: 10%; }
+				50% { left: 90%; top: 80%; }
+				75% { left: 20%; top: 90%; }
+				100% { left: 10%; top: 20%; }
+			}*/
+
+			/* ==========================================================================
+           💎 L'INVENTION : LA CARTE EN RÉFRACTION PURE
+        ========================================================================== */
+
+
+			.glass-card {
+				position: absolute;
+				left: var(--card-x);
+				top: var(--card-y);
+				width: var(--card-w);
+				height: var(--card-h);
+				animation: floatingCard 10s infinite alternate;
+				border-radius: 15px;
+
+				box-shadow: 0 var(--card-z) calc(var(--card-z) * 2) rgba(0, 0, 0, 0.4);
+
+				transform-style: preserve-3d;
+				background-color: #FF000005;
+
+			}
+
+			@keyframes floatingCard {
+				0%, 100% { transform: translate(-80%, -50%) translateY(0px) rotateX(calc(var(--card-rx) + 0deg)) rotateY(calc(var(--card-ry) + 0deg)) rotateZ(var(--card-rot)); }
+				25% { transform: translate(-80%, -50%) translateY(-15px) rotateX(calc(var(--card-rx) + 10deg)) rotateY(calc(var(--card-ry) + 5deg)) rotateZ(var(--card-rot)); }
+				50% { transform: translate(-80%, -50%) translateY(5px) rotateX(calc(var(--card-rx) - 5deg)) rotateY(calc(var(--card-ry) - 10deg)) rotateZ(var(--card-rot)); }
+				75% { transform: translate(-80%, -50%) translateY(-20px) rotateX(calc(var(--card-rx) - 10deg)) rotateY(calc(var(--card-ry) + 10deg)) rotateZ(var(--card-rot)); }
+			}
+
+			/* -----------------------------------------------------------
+           COUCHES DE RÉFRACTION SÉPARÉES (Le secret est le Masque !)
+           ----------------------------------------------------------- */
+
+
+			.glass-layer-bevel {
+				position: absolute;
+				inset: 0;
+				border-radius: 20px;
+
+
+				background: rgba(255, 255, 255, var(--bevel-smooth));
+				backdrop-filter: blur(var(--bevel-blur)) saturate(var(--glass-sat)) url(#svg-bevel-distort);
+
+
+				padding: var(--bevel-width);
+				-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+				mask: auto;
+				-webkit-mask-composite: xor;
+				mask-composite: exclude;
+
+
+				box-shadow: inset calc(var(--card-thick)*2) calc(var(--card-thick)*2) 15px var(--bevel-shadow-1),
+					inset calc(var(--card-thick)*-2) calc(var(--card-thick)*-2) 15px var(--bevel-shadow-2);
+
+			}
+
+
+			.glass-layer-center {
+				position: absolute;
+				inset: 0;
+				border-radius: 20px;
+
+				background: rgba(255, 255, 255, var(--glass-smooth));
+				backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) url(#svg-center-distort);
+			}
+
+
+			.glass-highlight {
+				position: absolute;
+				inset: 0;
+				border-radius: 20px;
+				pointer-events: none;
+				border: 1px solid transparent;
+				background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, transparent 40%, transparent 60%, rgba(255, 255, 255, 0.2) 100%) border-box;
+				-webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+				mask: auto;
+				-webkit-mask-composite: destination-out;
+				mask-composite: exclude;
+			}
+
+
+			.card-content {
+				position: absolute;
+				inset: var(--bevel-width);
+				z-index: 10;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				color: #fff;
+				text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+				pointer-events: none;
+			}
+
+			.card-content h3 {
+				font-size: 24px;
+				margin: 0;
+				letter-spacing: 2px;
+			}
+
+
+			body.bevel-concave {
+				--bevel-shadow-1: rgba(0, 0, 0, 0.4);
+				--bevel-shadow-2: rgba(255, 255, 255, 0.6);
+			}
+
+			body.bevel-convex {
+				--bevel-shadow-1: rgba(255, 255, 255, 0.6);
+				--bevel-shadow-2: rgba(0, 0, 0, 0.4);
+			}
+
+			body.bevel-flat {
+				--bevel-shadow-1: transparent;
+				--bevel-shadow-2: transparent;
+			}
+		</style>
+	</head>
+
+	<body class="show-bg-2 bevel-convex">
+
+		<svg style="width:0; height:0; position:absolute;">
+
+			<filter id="svg-center-distort">
+				<feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="1" result="noise" id="svg-glass-turb" />
+				<feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" id="svg-glass-disp" />
+			</filter>
+
+			<filter id="svg-bevel-distort">
+				<feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="noise" id="svg-bevel-turb" />
+				<feDisplacementMap in="SourceGraphic" in2="noise" scale="25" xChannelSelector="R" yChannelSelector="G" id="svg-bevel-disp" />
+			</filter>
+
+		</svg>
+
+		<div id="panel">
+			<h1>🛠️ Réfraction Lab</h1>
+
+			<h2>🌇 Background</h2>
+			<div class="ctrl-row"><label>Type :</label>
+				<select id="i-bg-type">
+					<option value="1">Spots Lumineux</option>
+					<option value="2" selected>Photo Apple</option>
+					<option value="3">Lignes</option>
+				</select>
+			</div>
+			<div class="ctrl-row"><label>Lignes Épaisseur :</label><input type="range" id="i-line-thick" min="1" max="50" value="10"></div>
+			<div class="ctrl-row"><label>Lignes Angle :</label><input type="range" id="i-line-angle" min="0" max="360" value="45"></div>
+
+			<h2>🪪 La Carte - Verre Central</h2>
+			<div class="ctrl-row"><label>Lissage (Opacité) :</label><input type="range" id="i-g-smooth" min="0" max="1" step="0.05" value="0"></div>
+			<div class="ctrl-row"><label>Blur (Transparence) :</label><input type="range" id="i-g-blur" min="0" max="30" value="0"></div>
+			<div class="ctrl-row"><label>Saturation :</label><input type="range" id="i-g-sat" min="0" max="3" step="0.1" value="0"></div>
+			<div class="ctrl-row"><label>Forme (Loupe) :</label><input type="range" id="i-g-shape" min="-50" max="50" value="0"></div>
+			<div class="ctrl-row"><label>Perfection (Défaut) :</label><input type="range" id="i-g-perf" min="0.001" max="0.1" step="0.001" value="0.0"></div>
+
+			<h2>🪪 La Carte - Le Biseau</h2>
+			<div class="ctrl-row"><label>Type de biseau :</label>
+				<select id="i-b-type">
+					<option value="bevel-convex" selected>Convexe</option>
+					<option value="bevel-concave">Concave</option>
+					<option value="bevel-flat">Tranche Nette</option>
+				</select>
+			</div>
+			<div class="ctrl-row"><label>Largeur biseau :</label><input type="range" id="i-b-width" min="0" max="100" value="0"></div>
+			<div class="ctrl-row"><label>Lissage :</label><input type="range" id="i-b-smooth" min="0" max="1" step="0.05" value="0"></div>
+			<div class="ctrl-row"><label>Grain (Blur) :</label><input type="range" id="i-b-blur" min="0" max="50" value="0"></div>
+			<div class="ctrl-row"><label>Perfection (Défaut) :</label><input type="range" id="i-b-perf" min="0.001" max="0.2" step="0.001" value="0.0"></div>
+			<div class="ctrl-row"><label>Déformation (Réfraction) :</label><input type="range" id="i-b-dist" min="0" max="100" value="0"></div>
+
+			<h2>📏 Caractéristiques physiques</h2>
+			<div class="ctrl-row"><label>Largeur :</label><input type="range" id="i-c-w" min="100" max="800" value="320"></div>
+			<div class="ctrl-row"><label>Hauteur :</label><input type="range" id="i-c-h" min="100" max="800" value="450"></div>
+			<div class="ctrl-row"><label>Position X :</label><input type="range" id="i-c-x" min="0" max="100" value="50"></div>
+			<div class="ctrl-row"><label>Position Y :</label><input type="range" id="i-c-y" min="0" max="100" value="50"></div>
+			<div class="ctrl-row"><label>Position Z (Ombre) :</label><input type="range" id="i-c-z" min="0" max="100" value="20"></div>
+			<div class="ctrl-row"><label>Rotation X :</label><input type="range" id="i-c-rx" min="-20" max="20" value="0"></div>
+			<div class="ctrl-row"><label>Rotation Y :</label><input type="range" id="i-c-ry" min="-20" max="20" value="0"></div>
+			<div class="ctrl-row"><label>Rotation Z :</label><input type="range" id="i-c-rot" min="-180" max="180" value="0"></div>
+
+			<h2>💡 La Lumière</h2>
+			<div class="ctrl-row"><label>Vitesse :</label><input type="range" id="i-l-speed" min="1" max="20" value="8"></div>
+			<div class="ctrl-row"><label>Luminosité :</label><input type="range" id="i-l-bright" min="0" max="1" step="0.1" value="0"></div>
+			<div class="ctrl-row"><label>Couleur :</label><input type="color" id="i-l-color" value="#00ffff" style="padding:0; height:18px;"></div>
+		</div>
+
+		<div id="scene">
+
+			<div id="bg-spots" class="bg-layer">
+				<div class="spot spot-1"></div>
+				<div class="spot spot-2"></div>
+			</div>
+			<div id="bg-photo" class="bg-layer"></div>
+			<div id="bg-lines" class="bg-layer"></div>
+
+			<div id="top-light"></div>
+
+			<div class="glass-card">
+				<div class="glass-layer-bevel"></div>
+				<div class="glass-layer-center"></div>
+				<div class="glass-highlight"></div>
+				<div class="card-content">
+					<h3>GLASS OS</h3>
+				</div>
+			</div>
+
+		</div>
+
+		<script>
+			const root = document.documentElement;
+			const b = document.body;
+
+
+			const bindVar = (id, cssVar, suffix = '') => {
+				const el = document.getElementById(id);
+				if (el) el.addEventListener('input', (e) => root.style.setProperty(cssVar, e.target.value + suffix));
+			};
+
+
+			const bindSvg = (id, svgId, attr) => {
+				const el = document.getElementById(id);
+				const svg = document.getElementById(svgId);
+				if (el && svg) el.addEventListener('input', (e) => svg.setAttribute(attr, e.target.value));
+			};
+
+
+			document.getElementById('i-bg-type').addEventListener('change', (e) => {
+				b.classList.remove('show-bg-1', 'show-bg-2', 'show-bg-3');
+				b.classList.add('show-bg-' + e.target.value);
+			});
+			bindVar('i-line-thick', '--lines-thick', 'px');
+			bindVar('i-line-angle', '--lines-angle', 'deg');
+
+
+			bindVar('i-g-smooth', '--glass-smooth');
+			bindVar('i-g-blur', '--glass-blur', 'px');
+			bindVar('i-g-sat', '--glass-sat');
+			bindSvg('i-g-shape', 'svg-glass-disp', 'scale');
+			bindSvg('i-g-perf', 'svg-glass-turb', 'baseFrequency');
+
+
+			document.getElementById('i-b-type').addEventListener('change', (e) => {
+				b.classList.remove('bevel-convex', 'bevel-concave', 'bevel-flat');
+				b.classList.add(e.target.value);
+			});
+			bindVar('i-b-width', '--bevel-width', 'px');
+			bindVar('i-b-smooth', '--bevel-smooth');
+			bindVar('i-b-blur', '--bevel-blur', 'px');
+			bindSvg('i-b-perf', 'svg-bevel-turb', 'baseFrequency');
+			bindSvg('i-b-dist', 'svg-bevel-disp', 'scale');
+
+
+			bindVar('i-c-w', '--card-w', 'px');
+			bindVar('i-c-h', '--card-h', 'px');
+			bindVar('i-c-x', '--card-x', 'vw');
+			bindVar('i-c-y', '--card-y', 'vh');
+			bindVar('i-c-z', '--card-z', 'px');
+			bindVar('i-c-rot', '--card-rot', 'deg');
+			bindVar('i-c-rx', '--card-rx', 'deg');
+			bindVar('i-c-ry', '--card-ry', 'deg');
+
+
+			bindVar('i-l-speed', '--light-speed', 's');
+			bindVar('i-l-bright', '--light-bright');
+			bindVar('i-l-color', '--light-color');
+		</script>
+	</body>
+
+</html>

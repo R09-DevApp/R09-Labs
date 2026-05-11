@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Laboratoire - Filtre SVG Custom</title>
+		<style>
+			:root {
+				--bg-dark: #1e1e2f;
+				--panel-bg: #2a2a40;
+				--text-light: #e0e0e0;
+				--accent: #00ffcc;
+			}
+
+			body {
+				margin: 0;
+				padding: 0;
+				font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+				background-color: var(--bg-dark);
+				color: var(--text-light);
+				display: flex;
+				height: 100vh;
+				overflow: hidden;
+			}
+
+
+			.preview-area {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				position: relative;
+			}
+
+			.instruction {
+				margin-bottom: 30px;
+				font-size: 1.2rem;
+				color: var(--accent);
+				text-align: center;
+			}
+
+
+			.target-image {
+				width: 300px;
+				height: 300px;
+				object-fit: cover;
+				border-radius: 12px;
+				box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+				transition: filter 0.3s ease;
+
+				background: url('https://picsum.photos/400/400?random=1') center/cover no-repeat;
+			}
+
+
+			.fx-svg-glitch {
+
+				filter: url('#mon-filtre-glitch');
+			}
+
+
+			.side-panel {
+				width: 350px;
+				background-color: var(--panel-bg);
+				padding: 30px 20px;
+				box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
+				display: flex;
+				flex-direction: column;
+				gap: 20px;
+				overflow-y: auto;
+			}
+
+			.side-panel h2 {
+				margin-top: 0;
+				border-bottom: 2px solid var(--accent);
+				padding-bottom: 10px;
+			}
+
+			.control-group {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+				background: rgba(255, 255, 255, 0.05);
+				padding: 15px;
+				border-radius: 8px;
+			}
+
+			.control-group label {
+				display: flex;
+				justify-content: space-between;
+				font-size: 0.9rem;
+				font-weight: bold;
+			}
+
+			.value-display {
+				color: var(--accent);
+			}
+
+			input[type="range"] {
+				width: 100%;
+				cursor: pointer;
+			}
+
+			.toggle-btn {
+				background-color: var(--accent);
+				color: #000;
+				border: none;
+				padding: 12px;
+				border-radius: 6px;
+				font-weight: bold;
+				cursor: pointer;
+				font-size: 1rem;
+				transition: transform 0.1s, opacity 0.2s;
+			}
+
+			.toggle-btn:hover {
+				opacity: 0.9;
+			}
+
+			.toggle-btn:active {
+				transform: scale(0.98);
+			}
+
+
+			.svg-defs {
+				position: absolute;
+				width: 0;
+				height: 0;
+			}
+		</style>
+	</head>
+
+	<body>
+
+		<svg class="svg-defs" xmlns="http://www.w3.org/2000/svg">
+			<defs>
+				<filter id="mon-filtre-glitch">
+
+					<feTurbulence id="svg-turbulence" type="fractalNoise" baseFrequency="0.05 0.9" numOctaves="1" result="bruit" />
+
+					<feDisplacementMap id="svg-displacement" in="SourceGraphic" in2="bruit" scale="20" xChannelSelector="R" yChannelSelector="G" />
+				</filter>
+			</defs>
+		</svg>
+
+		<div class="preview-area">
+			<div class="instruction">
+				L'image ci-dessous utilise <code>filter: url('#mon-filtre-glitch')</code>
+			</div>
+			<div class="target-image fx-svg-glitch" id="image-cible"></div>
+		</div>
+
+		<div class="side-panel">
+			<h2>🛠️ Paramètres du Filtre SVG</h2>
+			<p style="font-size: 0.85rem; color: #aaa;">
+				Modifiez ces variables pour voir comment elles altèrent le calcul de la balise HTML <code>&lt;feTurbulence&gt;</code> et <code>&lt;feDisplacementMap&gt;</code>.
+			</p>
+
+			<button class="toggle-btn" id="btn-toggle">Désactiver le filtre</button>
+
+			<div class="control-group">
+				<label>
+					Force de déformation (Scale)
+					<span class="value-display" id="val-scale">20</span>
+				</label>
+				<input type="range" id="input-scale" min="0" max="150" value="20">
+				<small style="color: #888;">Gère l'amplitude de la distorsion.</small>
+			</div>
+
+			<div class="control-group">
+				<label>
+					Fréquence (Bruit horizontal)
+					<span class="value-display" id="val-freq-x">0.05</span>
+				</label>
+				<input type="range" id="input-freq-x" min="0.001" max="0.5" step="0.005" value="0.05">
+				<small style="color: #888;">Contrôle la granularité du bruit sur l'axe X.</small>
+			</div>
+
+			<div class="control-group">
+				<label>
+					Fréquence (Bruit vertical)
+					<span class="value-display" id="val-freq-y">0.9</span>
+				</label>
+				<input type="range" id="input-freq-y" min="0.001" max="2" step="0.05" value="0.9">
+				<small style="color: #888;">Contrôle la granularité du bruit sur l'axe Y (très élevé = lignes horizontales style VHS).</small>
+			</div>
+
+			<div class="control-group">
+				<label>
+					Détail du bruit (Octaves)
+					<span class="value-display" id="val-octaves">1</span>
+				</label>
+				<input type="range" id="input-octaves" min="1" max="5" step="1" value="1">
+				<small style="color: #888;">Complexité de la texture générée par le bruit.</small>
+			</div>
+		</div>
+
+		<script>
+
+			const targetImage = document.getElementById('image-cible');
+			const btnToggle = document.getElementById('btn-toggle');
+
+
+			const svgTurbulence = document.getElementById('svg-turbulence');
+			const svgDisplacement = document.getElementById('svg-displacement');
+
+
+			const inputScale = document.getElementById('input-scale');
+			const valScale = document.getElementById('val-scale');
+
+			const inputFreqX = document.getElementById('input-freq-x');
+			const valFreqX = document.getElementById('val-freq-x');
+
+			const inputFreqY = document.getElementById('input-freq-y');
+			const valFreqY = document.getElementById('val-freq-y');
+
+			const inputOctaves = document.getElementById('input-octaves');
+			const valOctaves = document.getElementById('val-octaves');
+
+
+			let filterActive = true;
+
+
+			function updateFrequency() {
+				const freqStr = `${inputFreqX.value} ${inputFreqY.value}`;
+				svgTurbulence.setAttribute('baseFrequency', freqStr);
+				valFreqX.textContent = inputFreqX.value;
+				valFreqY.textContent = inputFreqY.value;
+			}
+
+
+			inputScale.addEventListener('input', (e) => {
+				const val = e.target.value;
+				svgDisplacement.setAttribute('scale', val);
+				valScale.textContent = val;
+			});
+
+			inputFreqX.addEventListener('input', updateFrequency);
+			inputFreqY.addEventListener('input', updateFrequency);
+
+			inputOctaves.addEventListener('input', (e) => {
+				const val = e.target.value;
+				svgTurbulence.setAttribute('numOctaves', val);
+				valOctaves.textContent = val;
+			});
+
+
+			btnToggle.addEventListener('click', () => {
+				filterActive = !filterActive;
+				if (filterActive) {
+					targetImage.classList.add('fx-svg-glitch');
+					btnToggle.textContent = 'Désactiver le filtre';
+					btnToggle.style.backgroundColor = 'var(--accent)';
+					btnToggle.style.color = '#000';
+				} else {
+					targetImage.classList.remove('fx-svg-glitch');
+					btnToggle.textContent = 'Activer le filtre';
+					btnToggle.style.backgroundColor = '#555';
+					btnToggle.style.color = 'white';
+				}
+			});
+		</script>
+	</body>
+
+</html>

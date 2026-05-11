@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU vs CPU Performance Lab | Tech Lead Edition</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --accent: #00ff88;
+            --panel-bg: rgba(20, 20, 20, 0.9);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: white;
+            font-family: 'JetBrains Mono', monospace, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+
+        #viewport {
+            flex: 1;
+            position: relative;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+
+        .object {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, var(--accent), #0066ff);
+            border-radius: 8px;
+            will-change: transform;
+        }
+
+
+        .with-blur { filter: blur(10px); }
+        .with-shadow { box-shadow: 0 0 50px 20px rgba(0, 255, 136, 0.5); }
+        .with-3d { transform-style: preserve-3d; }
+
+
+        .css-anim {
+            animation: move-css 2s infinite alternate ease-in-out;
+        }
+
+        @keyframes move-css {
+            from { transform: translate3d(0, 0, 0) rotate(0deg); }
+            to { transform: translate3d(var(--range-x), var(--range-y), 500px) rotate(360deg); }
+        }
+
+
+        #controls {
+            width: 350px;
+            background: var(--panel-bg);
+            border-left: 1px solid #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card {
+            background: #000;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #222;
+        }
+
+        .fps-value {
+            font-size: 2rem;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label { font-size: 0.8rem; color: #888; text-transform: uppercase; }
+
+        select, input, button {
+            width: 100%;
+            padding: 10px;
+            background: #111;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .btn-active { background: var(--accent); color: black; font-weight: bold; }
+
+        .mode-indicator {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .mode-css { background: #0066ff; }
+        .mode-js { background: #ff0066; }
+    </style>
+</head>
+<body>
+
+    <div id="viewport"></div>
+
+    <aside id="controls">
+        <div class="stat-card">
+            <label>Performance Réelle (FPS)</label>
+            <div id="fps-display" class="fps-value">60.0</div>
+            <div id="frame-time" style="font-size: 0.7rem; color: #555;">Frame time: 16.6ms</div>
+        </div>
+
+        <div class="control-group">
+            <label>Moteur de rendu</label>
+            <select id="engine-select">
+                <option value="css">CSS (Compositor Thread)</option>
+                <option value="js">JS (Main Thread - rAF)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Nombre d'objets : <span id="count-val">100</span></label>
+            <input type="range" id="object-count" min="1" max="2000" value="100">
+        </div>
+
+        <div class="control-group">
+            <label>Complexité Graphique</label>
+            <button id="toggle-blur">Toggle Blur (Heavy)</button>
+            <button id="toggle-shadow">Toggle Shadows (Lourd)</button>
+            <button id="toggle-3d">Toggle 3D Perspective</button>
+        </div>
+
+        <div class="control-group" style="margin-top: auto;">
+            <p style="font-size: 0.7rem; color: #666; line-height: 1.4;">
+                <strong>Expert Note :</strong> Le mode JS manipule les styles inline via requestAnimationFrame, forçant le calcul du CSSOM à chaque frame. Le mode CSS délègue l'interpolation au navigateur.
+            </p>
+            <button onclick="location.reload()" style="background: #333;">Reset Lab</button>
+        </div>
+    </aside>
+
+    <script>
+        const viewport = document.getElementById('viewport');
+        const engineSelect = document.getElementById('engine-select');
+        const objectCountInput = document.getElementById('object-count');
+        const countVal = document.getElementById('count-val');
+
+        let state = {
+            engine: 'css',
+            count: 100,
+            blur: false,
+            shadow: false,
+            perspective: false,
+            objects: []
+        };
+
+
+        let lastTime = performance.now();
+        let frames = 0;
+        let fpsDisplay = document.getElementById('fps-display');
+        let frameTimeDisplay = document.getElementById('frame-time');
+
+        function updateFPS() {
+            const now = performance.now();
+            const delta = now - lastTime;
+            frames++;
+
+            if (delta >= 1000) {
+                const fps = (frames * 1000) / delta;
+                fpsDisplay.innerText = fps.toFixed(1);
+                frameTimeDisplay.innerText = `Frame time: ${(delta / frames).toFixed(2)}ms`;
+                frames = 0;
+                lastTime = now;
+            }
+            requestAnimationFrame(updateFPS);
+        }
+        requestAnimationFrame(updateFPS);
+
+
+        function createObjects() {
+            viewport.innerHTML = '';
+            state.objects = [];
+            const fragment = document.createDocumentFragment();
+
+            for (let i = 0; i < state.count; i++) {
+                const el = document.createElement('div');
+                el.className = 'object';
+
+
+                const x = Math.random() * (viewport.clientWidth - 50);
+                const y = Math.random() * (viewport.clientHeight - 50);
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+
+
+                el.style.setProperty('--range-x', `${(Math.random() - 0.5) * 400}px`);
+                el.style.setProperty('--range-y', `${(Math.random() - 0.5) * 400}px`);
+
+                if (state.engine === 'css') {
+                    el.classList.add('css-anim');
+                }
+
+                if (state.blur) el.classList.add('with-blur');
+                if (state.shadow) el.classList.add('with-shadow');
+
+                fragment.appendChild(el);
+                state.objects.push({
+                    el,
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    rz: 0
+                });
+            }
+            viewport.appendChild(fragment);
+            viewport.style.perspective = state.perspective ? '1000px' : 'none';
+        }
+
+
+        function jsLoop() {
+            if (state.engine === 'js') {
+                for (let i = 0; i < state.objects.length; i++) {
+                    const obj = state.objects[i];
+                    obj.x += obj.vx;
+                    obj.y += obj.vy;
+                    obj.rz += 2;
+
+
+                    if (obj.x <= 0 || obj.x >= viewport.clientWidth - 50) obj.vx *= -1;
+                    if (obj.y <= 0 || obj.y >= viewport.clientHeight - 50) obj.vy *= -1;
+
+
+                    obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, ${state.perspective ? (obj.x % 500) : 0}px) rotate(${obj.rz}deg)`;
+                }
+            }
+            requestAnimationFrame(jsLoop);
+        }
+        requestAnimationFrame(jsLoop);
+
+
+        engineSelect.addEventListener('change', (e) => {
+            state.engine = e.target.value;
+            createObjects();
+        });
+
+        objectCountInput.addEventListener('input', (e) => {
+            state.count = parseInt(e.target.value);
+            countVal.innerText = state.count;
+            createObjects();
+        });
+
+        document.getElementById('toggle-blur').addEventListener('click', (e) => {
+            state.blur = !state.blur;
+            e.target.classList.toggle('btn-active');
+            createObjects();
+        });
+
+        document.getElementById('toggle-shadow').addEventListener('click', (e) => {
+            state.shadow = !state.shadow;
+            e.target.classList.toggle('btn-active');
+            createObjects();
+        });
+
+        document.getElementById('toggle-3d').addEventListener('click', (e) => {
+            state.perspective = !state.perspective;
+            e.target.classList.toggle('btn-active');
+            createObjects();
+        });
+
+
+        createObjects();
+
+    </script>
+</body>
+</html>

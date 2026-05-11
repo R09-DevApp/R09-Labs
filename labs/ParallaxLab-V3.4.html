@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parallaxe Lab</title>
+    <style>
+        :root {
+
+            --rot-x: -11.2;
+            --rot-y: 0.7;
+            --spacing: 60px;
+            --parallax: 0.5;
+
+
+            --bg-body: #1e1e24;
+            --bg-panel: #2b2b36;
+            --bg-stage: #141518;
+            --text-main: #ffffff;
+            --text-muted: #a0a0ab;
+            --accent: #8fb4ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 8px;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .stats {
+            display: flex;
+            gap: 24px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+
+        .stage-container {
+            background-color: var(--bg-stage);
+            border-radius: 16px;
+            height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .diorama {
+            position: relative;
+            width: 380px;
+            height: 260px;
+            transform-style: preserve-3d;
+
+            transform:
+                rotateX(calc(var(--rot-x) * 1deg))
+                rotateY(calc(var(--rot-y) * 1deg));
+
+            transition: transform 0.1s linear;
+        }
+
+
+        .layer {
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+
+            transform: translateZ(calc(var(--index) * var(--spacing)));
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+
+        .layer:nth-child(1) { --index: -4; background: #c084fc; }
+        .layer:nth-child(2) { --index: -3; background: #fb923c; }
+        .layer:nth-child(3) { --index: -2; background: #a3e635; }
+        .layer:nth-child(4) { --index: -1; background: #fcd34d; }
+
+
+        .layer:nth-child(5) {
+            --index: 0;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #0f172a;
+        }
+
+
+        .card-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .icon-wrapper {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .card-bg-text {
+            position: absolute;
+            font-size: 3rem;
+            font-weight: 900;
+            color: rgba(0,0,0,0.05);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .badge {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+
+        .controls-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-top: 8px;
+        }
+
+        .sliders-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 48px;
+        }
+
+        .control-group {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .value-box {
+            background: var(--bg-stage);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            min-width: 48px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            background: #4b4b56;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 24px;
+            border-radius: 4px;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+
+        .btn-reset {
+            width: 100%;
+            padding: 14px;
+            background: #3f3f4e;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-reset:hover {
+            background: #4f4f60;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header class="header">
+            <h1>Simulateur de Diorama 3D</h1>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">Angle X</span>
+                    <span class="stat-value" id="val-angle-x">-11.2°</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Angle Y</span>
+                    <span class="stat-value" id="val-angle-y">0.7°</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Profondeur Totale</span>
+                    <span class="stat-value" id="val-depth">240px</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="stage-container" id="stage">
+            <div class="diorama" id="diorama">
+                <div class="layer"></div>
+                <div class="layer"></div>
+                <div class="layer"></div>
+                <div class="layer"></div>
+                <div class="layer">
+                    <div class="badge">#1</div>
+                    <div class="card-bg-text">Archives</div>
+                    <div class="card-content">
+                        <div class="icon-wrapper">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
+                        <div class="card-title">Dossier Client</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="controls-footer">
+            <div class="sliders-row">
+                <div class="control-group">
+                    <label for="spacing">Espacement Z</label>
+                    <input type="range" id="spacing" min="0" max="100" value="60">
+                    <div class="value-box" id="val-spacing">60</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="parallax">Intensité Parallaxe</label>
+                    <input type="range" id="parallax" min="0" max="2" step="0.1" value="0.5">
+                    <div class="value-box" id="val-parallax">0.5</div>
+                </div>
+            </div>
+
+            <button class="btn-reset" id="btn-reset">Réinitialiser</button>
+        </footer>
+    </div>
+
+    <script>
+        const root = document.documentElement;
+        const stage = document.getElementById('stage');
+        const diorama = document.getElementById('diorama');
+
+
+        const inputSpacing = document.getElementById('spacing');
+        const inputParallax = document.getElementById('parallax');
+        const btnReset = document.getElementById('btn-reset');
+
+
+        const displayAngleX = document.getElementById('val-angle-x');
+        const displayAngleY = document.getElementById('val-angle-y');
+        const displayDepth = document.getElementById('val-depth');
+        const displaySpacing = document.getElementById('val-spacing');
+        const displayParallax = document.getElementById('val-parallax');
+
+
+        let currentSpacing = parseInt(inputSpacing.value);
+        let currentParallax = parseFloat(inputParallax.value);
+        let targetRotX = -11.2;
+        let targetRotY = 0.7;
+        let isTicking = false;
+
+
+        function updateDisplays() {
+            displayAngleX.textContent = `${targetRotX.toFixed(1)}°`;
+            displayAngleY.textContent = `${targetRotY.toFixed(1)}°`;
+
+            displayDepth.textContent = `${currentSpacing * 4}px`;
+        }
+
+
+        function updateCSS() {
+            root.style.setProperty('--rot-x', targetRotX);
+            root.style.setProperty('--rot-y', targetRotY);
+            updateDisplays();
+            isTicking = false;
+        }
+
+
+        stage.addEventListener('mousemove', (e) => {
+            const rect = stage.getBoundingClientRect();
+
+
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+
+            const percentX = (e.clientX - centerX) / (rect.width / 2);
+            const percentY = (e.clientY - centerY) / (rect.height / 2);
+
+
+
+            const maxAngle = 30;
+
+
+            targetRotY = percentX * maxAngle * currentParallax;
+            targetRotX = -(percentY * maxAngle * currentParallax);
+
+
+            if(diorama.style.willChange !== 'transform') {
+                diorama.style.willChange = 'transform';
+                diorama.style.transition = 'none';
+            }
+
+            if (!isTicking) {
+                requestAnimationFrame(updateCSS);
+                isTicking = true;
+            }
+        });
+
+
+        stage.addEventListener('mouseleave', () => {
+            diorama.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            diorama.style.willChange = 'auto';
+        });
+
+
+        inputSpacing.addEventListener('input', (e) => {
+            currentSpacing = e.target.value;
+            displaySpacing.textContent = currentSpacing;
+            root.style.setProperty('--spacing', `${currentSpacing}px`);
+            updateDisplays();
+        });
+
+
+        inputParallax.addEventListener('input', (e) => {
+            currentParallax = parseFloat(e.target.value);
+
+            displayParallax.textContent = currentParallax.toString().replace('.', ',');
+            root.style.setProperty('--parallax', currentParallax);
+        });
+
+
+        btnReset.addEventListener('click', () => {
+
+            currentSpacing = 60;
+            currentParallax = 0.5;
+            targetRotX = -11.2;
+            targetRotY = 0.7;
+
+
+            inputSpacing.value = currentSpacing;
+            inputParallax.value = currentParallax;
+
+
+            displaySpacing.textContent = "60";
+            displayParallax.textContent = "0,5";
+
+
+            diorama.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+            root.style.setProperty('--spacing', `${currentSpacing}px`);
+            root.style.setProperty('--parallax', currentParallax);
+            updateCSS();
+        });
+
+
+        updateDisplays();
+    </script>
+</body>
+</html>

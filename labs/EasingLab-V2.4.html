@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Easing Lab</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a; --panel-bg: rgba(30, 41, 59, 0.9);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.5);
+            --text-main: #f8fafc; --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.15);
+            --anim-duration: 1.5s; --anim-ease: linear;
+        }
+
+        * { box-sizing: border-box; }
+        body, html {
+            margin: 0; padding: 0; height: 100vh;
+            background-color: var(--bg-dark); color: var(--text-main);
+            font-family: -apple-system, system-ui, sans-serif;
+            overflow: hidden;
+        }
+
+
+        .ui-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 100;
+            width: 340px; background: var(--panel-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--border); border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column;
+        }
+
+        .panel-section { padding: 20px; border-bottom: 1px solid var(--border); }
+        .panel-section:last-child { border-bottom: none; }
+
+        h1 { margin: 0 0 15px 0; font-size: 1.1rem; color: var(--accent); letter-spacing: 1px; }
+        h2 { margin: 0 0 10px 0; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.8rem; font-weight: 600; }
+        .control-row span { color: var(--accent); font-family: monospace; }
+
+        input[type="range"] {
+            -webkit-appearance: none; width: 100%; height: 4px; background: #334155; border-radius: 2px; outline: none; margin-bottom: 15px; cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .toggle-group { display: flex; background: #0f172a; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; width: 150px;}
+        .toggle-btn { flex: 1; padding: 6px 0; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.2s; }
+        .toggle-btn.active { background: var(--accent); color: #000; }
+
+
+        .stage {
+            width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+        }
+
+        .graph-wrapper {
+            position: relative; width: 500px; height: 500px;
+            background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 12px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5), 0 20px 50px rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px); touch-action: none;
+        }
+
+        svg { width: 100%; height: 100%; overflow: visible; display: block; }
+        .grid-line { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 4; }
+        .grid-axis { stroke: rgba(255,255,255,0.2); stroke-width: 2; fill: none; }
+
+        .smooth-curve { stroke: var(--accent); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .linear-preview { stroke: rgba(255,255,255,0.4); stroke-width: 2; fill: none; stroke-dasharray: 1 6; pointer-events: none; stroke-linecap: round;}
+
+        .handle-line { stroke: rgba(255,255,255,0.2); stroke-width: 2; fill: none; stroke-dasharray: 4; }
+        .handle { fill: var(--bg-dark); stroke: var(--accent); stroke-width: 3; cursor: grab; r: 10; transition: r 0.1s, fill 0.1s; }
+        .handle:hover { r: 14; fill: var(--accent); }
+        .handle.dragging { cursor: grabbing; r: 14; fill: #fff; stroke: #fff;}
+
+        .anchor-point { fill: #fff; r: 5; pointer-events: none; }
+
+
+        .preview-box {
+            position: absolute; bottom: 40px; width: 600px; max-width: 90vw;
+            background: rgba(0,0,0,0.4); border-radius: 8px; padding: 20px; border: 1px solid var(--border);
+        }
+        .track { width: 100%; height: 2px; background: rgba(255,255,255,0.2); position: relative; }
+        .runner {
+            width: 40px; height: 40px; background: var(--accent); border-radius: 8px;
+            position: absolute; top: -19px; left: 0;
+            box-shadow: 0 0 20px var(--accent-glow);
+            animation: moveRunner var(--anim-duration) var(--anim-ease) infinite alternate;
+        }
+
+        @keyframes moveRunner { 0% { transform: translateX(0); } 100% { transform: translateX(560px); } }
+
+
+        .code-panel {
+            position: absolute; top: 20px; right: 20px; z-index: 100;
+            background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 15px; width: 380px; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        textarea {
+            width: 100%; height: 160px; background: #000; color: var(--accent); border: 1px solid #334155; border-radius: 4px;
+            padding: 10px; font-family: 'Courier New', Courier, monospace; font-size: 0.8rem; resize: none; outline: none; margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .copy-btn {
+            width: 100%; padding: 10px; background: var(--accent); color: #000; border: none; border-radius: 4px;
+            cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.2s;
+        }
+        .copy-btn:hover { background: #34d399; }
+
+    </style>
+</head>
+<body>
+
+    <aside class="ui-panel">
+        <div class="panel-section">
+            <h1>N-DEGREE LAB</h1>
+            <p style="font-size: 0.7rem; color: var(--text-muted); margin: 0;">Éditeur mathématique vers linear()</p>
+        </div>
+
+        <div class="panel-section">
+            <h2>Structure de la courbe</h2>
+            <div class="control-row">
+                <label>Nombre de poignées</label>
+                <div class="toggle-group" id="handleToggles">
+                    <button class="toggle-btn" data-count="1">1</button>
+                    <button class="toggle-btn active" data-count="2">2</button>
+                    <button class="toggle-btn" data-count="3">3</button>
+                </div>
+            </div>
+
+            <div class="control-row" style="margin-top: 20px;"><label>Durée d'animation</label><span id="valDuration">1.5s</span></div>
+            <input type="range" id="ctrlDuration" min="0.1" max="5.0" step="0.1" value="1.5">
+
+            <div class="control-row"><label>Points générés (Max 20)</label><span id="valResolution">20</span></div>
+            <input type="range" id="ctrlResolution" min="5" max="20" step="1" value="20">
+        </div>
+    </aside>
+
+    <main class="stage">
+        <div class="graph-wrapper">
+            <svg id="svgGraph" viewBox="0 0 500 500">
+                <line x1="100" y1="100" x2="400" y2="100" class="grid-line" /> <line x1="100" y1="250" x2="400" y2="250" class="grid-line" /> <line x1="100" y1="400" x2="400" y2="400" class="grid-line" /> <rect x="100" y="100" width="300" height="300" class="grid-axis" />
+
+                <path id="controlPolygon" class="handle-line" />
+
+                <path id="linearPreview" class="linear-preview" />
+
+                <path id="smoothCurve" class="smooth-curve" />
+
+                <g id="handlesGroup"></g>
+
+                <circle cx="100" cy="400" class="anchor-point" />
+                <circle cx="400" cy="100" class="anchor-point" />
+            </svg>
+        </div>
+
+        <div class="preview-box">
+            <div class="track"><div class="runner" id="runner"></div></div>
+        </div>
+
+        <div class="code-panel">
+            <h2>Code CSS Généré</h2>
+            <textarea id="cssOutput" readonly></textarea>
+            <button class="copy-btn" id="btnCopy">Copier le code</button>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONSTANTES ---
+            const GRAPH_SIZE = 300;
+            const OFFSET = 100;
+
+            // --- ÉTAT ---
+            const state = {
+                duration: 1.5,
+                resolution: 20,
+                handles: [] // Rempli dynamiquement
+            };
+
+            // --- DOM ELEMENTS ---
+            const svg = document.getElementById('svgGraph');
+            const handlesGroup = document.getElementById('handlesGroup');
+            const controlPolygon = document.getElementById('controlPolygon');
+            const smoothCurve = document.getElementById('smoothCurve');
+            const linearPreview = document.getElementById('linearPreview');
+            const runner = document.getElementById('runner');
+            const cssOutput = document.getElementById('cssOutput');
+            const root = document.documentElement;
+
+            // --- UTILITAIRES MATHÉMATIQUES ---
+            const toSvgX = (nx) => OFFSET + nx * GRAPH_SIZE;
+            const toSvgY = (ny) => OFFSET + GRAPH_SIZE - (ny * GRAPH_SIZE);
+
+            // Factorielles et Coefficients Binomiaux pour la formule de Bézier de degré N
+            const fact = (n) => (n <= 1 ? 1 : n * fact(n - 1));
+            const binom = (n, k) => fact(n) / (fact(k) * fact(n - k));
+
+            // Calcule la position sur l'axe donné ('x' ou 'y') pour une courbe de Bézier à N points
+            const getBezierAxis = (t, axis) => {
+                // Les points complets = [0,0] + [Poignées] + [1,1]
+                const points = [{x: 0, y: 0}, ...state.handles, {x: 1, y: 1}];
+                const n = points.length - 1;
+                let val = 0;
+                for (let i = 0; i <= n; i++) {
+                    val += binom(n, i) * Math.pow(1 - t, n - i) * Math.pow(t, i) * points[i][axis];
+                }
+                return val;
+            };
+
+            // Algorithme de recherche binaire pour trouver 't' à un 'X' précis
+            const getTForX = (targetX) => {
+                let lower = 0, upper = 1, t = 0.5;
+                for(let i = 0; i < 20; i++) {
+                    const currentX = getBezierAxis(t, 'x');
+                    if (Math.abs(currentX - targetX) < 0.0001) return t;
+                    if (currentX < targetX) lower = t; else upper = t;
+                    t = (lower + upper) / 2;
+                }
+                return t;
+            };
+
+            // --- MOTEUR DE RENDU ---
+            const render = () => {
+                // 1. Mise à jour du groupe SVG (Poignées & Polygone de contrôle)
+                handlesGroup.innerHTML = '';
+
+                let polygonPath = `M ${toSvgX(0)},${toSvgY(0)} `;
+                state.handles.forEach((pt, i) => {
+                    polygonPath += `L ${toSvgX(pt.x)},${toSvgY(pt.y)} `;
+
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', toSvgX(pt.x)); circle.setAttribute('cy', toSvgY(pt.y));
+                    circle.setAttribute('class', 'handle');
+                    circle.dataset.index = i;
+                    handlesGroup.appendChild(circle);
+                });
+                polygonPath += `L ${toSvgX(1)},${toSvgY(1)}`;
+                controlPolygon.setAttribute('d', polygonPath);
+
+                // 2. Dessin de la Courbe Mathématique Fluide (Haute Résolution)
+                let smoothD = `M ${toSvgX(0)},${toSvgY(0)} `;
+                for (let i = 1; i <= 100; i++) {
+                    let t = i / 100;
+                    smoothD += `L ${toSvgX(getBezierAxis(t, 'x'))},${toSvgY(getBezierAxis(t, 'y'))} `;
+                }
+                smoothCurve.setAttribute('d', smoothD);
+
+                // 3. Échantillonnage pour la fonction linear()
+                const yValues = [];
+                let previewD = `M ${toSvgX(0)},${toSvgY(0)} `;
+
+                for (let i = 0; i < state.resolution; i++) {
+                    const targetX = i / (state.resolution - 1);
+                    const t = getTForX(targetX);
+                    const y = getBezierAxis(t, 'y');
+
+                    yValues.push(y.toFixed(4));
+                    if (i > 0) previewD += `L ${toSvgX(targetX)},${toSvgY(y)} `;
+                }
+                linearPreview.setAttribute('d', previewD);
+
+                // 4. Formatage du CSS (Max 5 valeurs par ligne)
+                const chunks = [];
+                for (let i = 0; i < yValues.length; i += 5) {
+                    chunks.push("  " + yValues.slice(i, i + 5).join(", "));
+                }
+
+                let comments = state.handles.length === 2
+                    ? `\n`
+                    : `\n`;
+
+                const cssString = `linear(\n${chunks.join(",\n")}\n)`;
+                cssOutput.value = `${comments}animation-timing-function: ${cssString};`;
+
+                // 5. Application
+                runner.style.animation = 'none';
+                void runner.offsetWidth;
+                root.style.setProperty('--anim-ease', cssString.replace(/\n/g, ' '));
+                runner.style.animation = `moveRunner var(--anim-duration) var(--anim-ease) infinite alternate`;
+            };
+
+            // --- INITIALISATION DES POIGNÉES ---
+            const initHandles = (count) => {
+                state.handles = [];
+                for(let i = 1; i <= count; i++) {
+                    // Magie mathématique : x se place précisément à 50% ou 33/66% ou 25/50/75%
+                    const x = i / (count + 1);
+                    // y est initialisé sur une ligne diagonale (comportement linear)
+                    const y = x;
+                    state.handles.push({x, y});
+                }
+                render();
+            };
+
+            // --- GESTION DES EVENEMENTS & DRAG SAFARI PROOF ---
+            let activeHandleIndex = null;
+
+            svg.addEventListener('pointerdown', (e) => {
+                if (e.target.classList.contains('handle')) {
+                    e.preventDefault();
+                    activeHandleIndex = parseInt(e.target.dataset.index);
+                    e.target.classList.add('dragging');
+                }
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (activeHandleIndex === null) return;
+
+                const rect = svg.getBoundingClientRect();
+                const scaleX = 500 / rect.width;
+                const scaleY = 500 / rect.height;
+
+                const svgX = (e.clientX - rect.left) * scaleX;
+                const svgY = (e.clientY - rect.top) * scaleY;
+
+                // Contrainte de X entre 0 et 1. Y est totalement libre (rebonds permis)
+                state.handles[activeHandleIndex].x = Math.max(0, Math.min(1, (svgX - OFFSET) / GRAPH_SIZE));
+                state.handles[activeHandleIndex].y = (OFFSET + GRAPH_SIZE - svgY) / GRAPH_SIZE;
+
+                render();
+            });
+
+            const stopDrag = () => {
+                activeHandleIndex = null;
+                document.querySelectorAll('.handle').forEach(el => el.classList.remove('dragging'));
+            };
+
+            window.addEventListener('pointerup', stopDrag);
+            window.addEventListener('pointercancel', stopDrag);
+
+            // --- CONTROLEURS UI ---
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    initHandles(parseInt(e.target.dataset.count));
+                });
+            });
+
+            document.getElementById('ctrlDuration').addEventListener('input', (e) => {
+                state.duration = parseFloat(e.target.value);
+                document.getElementById('valDuration').textContent = state.duration.toFixed(1) + 's';
+                root.style.setProperty('--anim-duration', `${state.duration}s`);
+            });
+
+            document.getElementById('ctrlResolution').addEventListener('input', (e) => {
+                state.resolution = parseInt(e.target.value);
+                document.getElementById('valResolution').textContent = state.resolution;
+                render();
+            });
+
+            document.getElementById('btnCopy').addEventListener('click', () => {
+                cssOutput.select(); document.execCommand('copy');
+                const btn = document.getElementById('btnCopy');
+                btn.textContent = "Copié !";
+                setTimeout(() => { btn.textContent = "Copier le code"; }, 1500);
+            });
+
+            // Initialisation avec 2 poignées par défaut
+            initHandles(2);
+        });
+    </script>
+</body>
+</html>
