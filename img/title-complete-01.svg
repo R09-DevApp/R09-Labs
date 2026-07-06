@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6800 800" width="100%" style="display: block; margin: auto;">
+    <!-- 
+      LOGOTYPE PROPRIÉTAIRE : OZARUKAI
+      Concept : Cyber-Zen Gorille
+      Grille Globale : 6800x800 | Graisse : 220 | Stencil cuts : 40px
+    -->
+    
+    <g fill="#00D1FF">
+        <!-- Lettre 1 : O -->
+        <g transform="translate(0, 0)">
+            <path d="M 100 0 L 280 0 L 280 220 L 220 220 L 220 580 L 630 580 L 630 220 L 320 220 L 320 0 L 750 0 L 850 100 L 850 700 L 750 800 L 100 800 L 0 700 L 0 100 Z" />
+        </g>
+
+        <!-- Lettre 2 : Z (Espace: 100) -->
+        <g transform="translate(950, 0)">
+            <path d="M 100 0 L 800 0 L 800 220 L 0 220 L 0 100 Z" />
+            <path d="M 460 260 L 760 260 L 440 580 L 800 580 L 800 700 L 700 800 L 0 800 L 0 580 L 140 580 Z" />
+        </g>
+
+        <!-- Lettre 3 : A (Espace: 100) -->
+        <g transform="translate(1850, 0)">
+            <path d="M 0 800 L 250 100 L 350 0 L 500 0 L 600 100 L 850 800 L 610 800 L 425 250 L 240 800 Z" />
+            <path d="M 364 550 L 486 550 L 543 720 L 307 720 Z" />
+        </g>
+
+        <!-- Lettre 4 : R (Espace: 100) -->
+        <g transform="translate(2800, 0)">
+            <path d="M 0 0 L 750 0 L 850 100 L 850 580 L 220 580 L 220 800 L 0 800 Z M 220 220 L 220 400 L 630 400 L 630 220 Z" fill-rule="nonzero" />
+            <path d="M 420 620 L 680 620 L 850 800 L 590 800 Z" />
+        </g>
+
+        <!-- Lettre 5 : U (Espace: 100) -->
+        <g transform="translate(3750, 0)">
+            <path d="M 0 0 L 220 0 L 220 220 L 0 220 Z" />
+            <path d="M 0 260 L 220 260 L 220 580 L 630 580 L 630 0 L 850 0 L 850 700 L 750 800 L 100 800 L 0 700 Z" />
+        </g>
+
+        <!-- Lettre 6 : K (Espace: 100) -->
+        <g transform="translate(4700, 0)">
+            <path d="M 100 0 L 220 0 L 220 320 L 540 0 L 750 0 L 850 100 L 440 510 L 220 510 L 220 800 L 0 800 L 0 100 Z" />
+            <path d="M 290 550 L 600 550 L 850 800 L 540 800 Z" />
+        </g>
+
+        <!-- Lettre 7 : A (CRÉNAGE NÉGATIF ! Espace réduit à 50 pour emboîter le K) -->
+        <g transform="translate(5600, 0)">
+            <path d="M 0 800 L 250 100 L 350 0 L 500 0 L 600 100 L 850 800 L 610 800 L 425 250 L 240 800 Z" />
+            <path d="M 364 550 L 486 550 L 543 720 L 307 720 Z" />
+        </g>
+
+        <!-- Lettre 8 : I (Espace: 100) -->
+        <g transform="translate(6550, 0)">
+            <path d="M 100 0 L 220 0 L 220 700 L 120 800 L 0 800 L 0 100 Z" />
+        </g>
+    </g>
+</svg>
